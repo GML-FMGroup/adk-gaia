@@ -235,13 +235,11 @@ python cli_chat.py
 5.  **更新协调器指令:** 修改 `orchestrator_agent` 的 `instruction`，清楚地说明新专家 Agent 的能力以及**如何构造传递给它的参数**（例如，对于文件处理，是构造包含路径和指令的单一 `request` 字符串）。
 
 ## TODO / 未来工作
-
+**[未来 Agent 系统设计规划](docs/Agent System Design.md)**
 *   [ ] **完善工具集&&专家系统:**
     *   目前gaia验证集前100题结果已跑出，可根据结果进行针对性优化
-    *   优化文件处理Agent，增强工具能力。考虑为FileProcessAgent添加本地代码解释器辅助文件处理
-    *   优化WebSearchAgent，考虑集成 Playwright 用于动态网页，添加更健壮的网页内容提取（例如处理表格、特定标签）
-    *   添加一些MCP工具，弥补少数题目没有还没有工具可用的尴尬境地
-    *   实现 CalculatorAgent 及其工具
+    *   根据规划，继续增强现有的Agents和Tools
+    *   添加一些MCP工具，确保工具质量的情况下快速增强Agent的能力
 *   [ ] **添加重试机制:** 为 Google API 调用和可能的工具执行失败添加重试逻辑。目前相当一部分任务解决失败是由于谷歌API后端的500 Internal Error所致，添加重试应能显著提升准确率
 *   [ ] **优化 Prompt Engineering:** 持续迭代和优化所有 Agent 的指令，提高任务理解、规划和工具使用能力，特别是最终答案格式的遵循。
 *   [ ] **优化架构:** 考虑使用ADK官方的WebUI、CLI和API实现，之前没有注意到有这个。
