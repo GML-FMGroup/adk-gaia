@@ -12,23 +12,23 @@
 
 *   **GAIAOrchestratorAgent (协调器):**
     *   作为系统的入口和总指挥。
-    *   使用强大的 LLM (如 `gemini-2.5-pro`) 来理解 GAIA 任务（问题 + 可选文件）。
+    *   使用强大的 LLM (如 `gemini-2.5-pro-preview-03-25`) 来理解 GAIA 任务（包括从问题文本中**提取文件路径**）。
     *   制定（隐式或显式的）执行计划。
     *   通过 ADK 的 `AgentTool` 机制将子任务委托给相应的专家 Agent。
-    *   管理会话状态 (`session.state`) 以传递文件路径等上下文信息。
     *   整合来自专家 Agent 的结果。
     *   按照 GAIA 要求格式化最终答案 (`FINAL ANSWER: ...`)。
 *   **专家 Agents:**
-    *   **WebResearcherAgent:** 负责执行网页搜索和内容提取。持有 `google_search` 工具和自定义的网页抓取工具。
+    *   **WebResearcherAgent:** 负责执行网页搜索和内容提取。持有 `google_search` 工具和自定义的网页抓取工具 (待实现)。
     *   **CodeExecutorAgent:** 负责执行 Python 代码片段。持有 `built_in_code_execution` 工具。
-    *   **FileProcessorAgent:** (核心文件处理单元) 负责处理各种格式的文件（txt, json, xlsx, csv, pdf, docx, mp3, pdb, zip等）。它内部持有一系列 `FunctionTool`，一部分使用标准 Python 库（如 `pandas`, `pypdf`, `Biopython`），另一部分利用 `google-genai` SDK 实现对 PDF、音频的原生多模态处理。
+    *   **FileProcessorAgent:** (核心文件处理单元) 负责处理各种格式的文件（txt, json, xlsx, csv, pdf, docx, pptx, mp3, wav, png, jpg, pdb, zip等）。它内部持有一系列 `FunctionTool`，一部分使用标准 Python 库（如 `pandas`, `pypdf`, `python-pptx`, `Biopython`），另一部分利用 `google-genai` SDK 实现对 PDF、音频和**图像**的原生多模态处理。**它直接接收文件路径作为工具参数。**
     *   **CalculatorAgent (未来):** 负责执行数学计算、统计和单位转换。
-*   **Agent 间通信:** 主要通过 `AgentTool` 实现显式调用和结果返回。`session.state` 用于共享上下文信息，如需要处理的文件路径 (`gaia_file_path`)。
+*   **Agent 间通信:** 主要通过 `AgentTool` 实现显式调用和结果返回。**Orchestrator Agent 在调用 FileProcessorAgent 时，会构造一个包含文件路径和具体操作指令的单一字符串参数 (`request`)。** `session.state` 可用于共享*其他*上下文信息（如果需要）。
 
 ## 项目结构
 
 ```
 .
+├── eval.py               # 根据GAIA官方评测函数评估指定jsonl文件Accurancy
 ├── .env                  # 存放 API 密钥
 ├── config.json           # 模型名称、端口、路径等配置
 ├── pyproject.toml        # 项目依赖管理 (使用 uv)
@@ -88,7 +88,7 @@ conda activate gaia-adk-agent
 
 ### 4. 安装依赖
 
-使用 `uv` 根据 `pyproject.toml` 安装所有必需的库：
+使用 `uv` 根据 `pyproject.toml` 安装所有必需的库（包括新增的 `python-pptx`）：
 
 ```bash
 uv pip install .
@@ -123,6 +123,8 @@ GOOGLE_GENAI_USE_VERTEXAI=FALSE
                     metadata.jsonl
                     <task_id>.pdf
                     <task_id>.xlsx
+                    <task_id>.png
+                    <task_id>.pptx
                     ...
                 test/
                     ...
@@ -162,11 +164,13 @@ API 服务器运行后，打开**另一个激活了 Conda 环境**的终端，�
 python cli_chat.py
 ```
 
-按照提示输入问题与 Agent 交互。输入 `quit` 或 `exit` 退出。
+按照提示输入问题与 Agent 交互。如果需要 Agent 处理本地文件，**请在问题中明确提供文件的绝对路径**，例如："Summarize the document at /home/user/mydocs/report.pdf"。输入 `quit` 或 `exit` 退出。
 
 ## 运行 GAIA 评估 (`run_gaia.py`)
 
 此脚本用于批量处理 GAIA 数据集中的任务，并将结果（包括模型答案和基础元数据）保存到 JSON Lines 文件中。
+
+**重要:** 脚本现在会自动计算 GAIA 任务附件的绝对路径，并将其包含在发送给 Orchestrator Agent 的问题文本中。
 
 1. **确保 API 服务器正在运行。**
 2. **运行脚本:** 在**激活了 Conda 环境**的终端中，运行：
@@ -179,10 +183,10 @@ python cli_chat.py
 
 ### 添加新工具 (FunctionTool)
 
-1.  **实现函数:** 在 `src/tools/` 下（例如 `src/tools/calculation_tools.py`）创建你的 Python 函数，确保它有清晰的类型提示和详细的 **docstring** (这对 LLM 理解工具至关重要)。函数的返回值最好是字典，包含 `status` 和 `content`/`message`。
+1.  **实现函数:** 在 `src/tools/` 下（例如 `src/tools/calculation_tools.py`）创建你的 Python 函数，确保它有清晰的类型提示和详细的 **docstring** (这对 LLM 理解工具至关重要)。函数的返回值最好是字典，包含 `status` 和 `content`/`message`。**如果工具需要处理文件，它应该接受一个 `file_path` 参数。**
 2.  **包装工具:** 在需要使用该工具的 Agent 文件中（例如 `src/agents/calculator.py`），导入你的函数，并使用 `from google.adk.tools import FunctionTool` 将其包装：`my_new_tool = FunctionTool(func=your_tool_function)`。
 3.  **注册工具:** 将创建的 `my_new_tool` 实例添加到对应 Agent 定义中的 `tools` 列表中。
-4.  **更新指令:** 修改 Agent 的 `instruction`，告知 LLM 新工具的存在、功能以及何时应该调用它。
+4.  **更新指令:** 修改 Agent 的 `instruction`，告知 LLM 新工具的存在、功能以及何时应该调用它（包括需要传递哪些参数，如 `file_path`）。
 
 ### 添加新工具 (MCPTool)
 
@@ -228,20 +232,20 @@ python cli_chat.py
     *   在 `src/agents/orchestrator.py` 中，导入你的新 Agent 实例。
     *   使用 `from google.adk.tools import agent_tool` 将其包装成 `AgentTool`：`new_agent_tool = agent_tool.AgentTool(agent=your_new_agent_instance)`。
     *   将 `new_agent_tool` 添加到 `orchestrator_agent` 的 `tools` 列表中。
-5.  **更新协调器指令:** 修改 `orchestrator_agent` 的 `instruction`，清楚地说明新专家 Agent 的能力以及何时应该委托任务给它。
+5.  **更新协调器指令:** 修改 `orchestrator_agent` 的 `instruction`，清楚地说明新专家 Agent 的能力以及**如何构造传递给它的参数**（例如，对于文件处理，是构造包含路径和指令的单一 `request` 字符串）。
 
 ## TODO / 未来工作
 
-*   [ ] **修复 FileProcessorAgent:** 调试并修复处理 XLSX, PDB, JSONLD 等文件时出现的无法传递文件路径参数的问题。
-*   [ ] **完善工具集以及设计其他Agent:**
-    *   添加更健壮的网页内容提取（例如处理表格、特定标签）。
-    *   考虑集成 Playwright/Selenium 用于动态网页。
-    *   实现对更多文件格式（如图、视频帧）的原生处理或包装。
-    *   添加地理空间工具 (`geopy`)。
-*   [ ] **添加重试机制:** 为 Google API 调用和可能的工具执行失败添加重试逻辑。
-*   [ ] **实现 GAIA 评估脚本:** 添加一个脚本使用 `run_gaia.py` 的输出和 GAIA 官方评分函数来计算准确率。
+*   [ ] **完善工具集&&专家系统:**
+    *   目前gaia验证集前100题结果已跑出，可根据结果进行针对性优化
+    *   优化文件处理Agent，增强工具能力。考虑为FileProcessAgent添加本地代码解释器辅助文件处理
+    *   优化WebSearchAgent，考虑集成 Playwright 用于动态网页，添加更健壮的网页内容提取（例如处理表格、特定标签）
+    *   添加一些MCP工具，弥补少数题目没有还没有工具可用的尴尬境地
+    *   实现 CalculatorAgent 及其工具
+*   [ ] **添加重试机制:** 为 Google API 调用和可能的工具执行失败添加重试逻辑。目前相当一部分任务解决失败是由于谷歌API后端的500 Internal Error所致，添加重试应能显著提升准确率
 *   [ ] **优化 Prompt Engineering:** 持续迭代和优化所有 Agent 的指令，提高任务理解、规划和工具使用能力，特别是最终答案格式的遵循。
-*   [ ] **脱离GAIA使用:** 如果工具和Agent完善之后刷GAIA分数高的话，考虑基于此制作一个客户端，提供实用功能。
+*   [ ] **优化架构:** 考虑使用ADK官方的WebUI、CLI和API实现，之前没有注意到有这个。
+*   [ ] **脱离GAIA使用:** 如果工具和Agent完善之后刷GAIA分数高的话，考虑基于此制作一个客户端，探寻Agent系统有趣的实际应用。
 *   [ ] **添加可视化架构图:** 在 README 中加入更清晰的架构图。
 
 ## 贡献
@@ -249,4 +253,11 @@ python cli_chat.py
 欢迎贡献！如果您发现 Bug 或有改进建议，请提出 Issue 或 Pull Request。
 
 ## 许可证
-没啥许可证。目前自己玩玩而已，有人感兴趣的话我会很高兴。欢迎一起交流。
+
+本软件根据 Apache License, Version 2.0 ("许可证") 授权；除非符合许可证，否则您不得使用此文件。
+您可以在以下网址获取许可证副本：
+
+&nbsp;&nbsp;&nbsp;&nbsp; http://www.apache.org/licenses/LICENSE-2.0
+
+除非适用法律要求或书面同意，根据许可证分发的软件是按"原样"基础提供的，**没有任何明示或暗示的担保或条件**。
+请参阅许可证了解许可证下的特定语言管理权限和限制。
