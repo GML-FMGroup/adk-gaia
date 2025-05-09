@@ -2,7 +2,6 @@
 import os
 import json
 import zipfile
-import pandas as pd
 from pptx import Presentation
 
 try:
@@ -95,55 +94,6 @@ def read_json_file(file_path: str) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error reading JSON file {file_path}: {e}")
         return {"status": "error", "message": f"Error reading file: {str(e)}"}
-
-def read_spreadsheet(file_path: str, query: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Reads data from an Excel (.xlsx) or CSV (.csv) file using pandas.
-    Can optionally execute a pandas query string.
-    Returns the data as a markdown formatted string.
-    """
-    logger.info(f"Attempting to read spreadsheet: {file_path} with query: {query}")
-    try:
-        if file_path.endswith('.xlsx'):
-            df = pd.read_excel(file_path)
-        elif file_path.endswith('.csv'):
-            df = pd.read_csv(file_path)
-        else:
-            return {"status": "error", "message": "Unsupported spreadsheet format."}
-
-        if query:
-            try:
-                logger.info(f"Executing query on dataframe: {query}")
-                # 增加安全性：限制可用的查询函数 (如果 pandas 版本支持 engine='python')
-                # 或进行更严格的查询字符串验证
-                df_result = df.query(query, engine='python') # 尝试使用更安全的 python engine
-                if df_result is None: # query 可能返回 None
-                    df_result = pd.DataFrame() # 返回空 DataFrame
-                df = df_result
-            except Exception as qe:
-                 logger.error(f"Error executing query '{query}' on {file_path}: {qe}")
-                 return {"status": "error", "message": f"Error executing query: {str(qe)}"}
-
-        logger.info(f"Successfully read and queried spreadsheet: {file_path}")
-        max_rows = 20
-        if len(df) > max_rows:
-             content = df.head(max_rows).to_markdown(index=False) + f"\n... (showing first {max_rows} rows of {len(df)})"
-        else:
-             content = df.to_markdown(index=False)
-
-        max_len = 10000
-        if len(content) > max_len:
-            logger.warning(f"Spreadsheet content from {file_path} truncated.")
-            content = content[:max_len] + "\n... (table truncated)"
-
-        return {"status": "success", "content": content}
-
-    except FileNotFoundError:
-        logger.error(f"File not found: {file_path}")
-        return {"status": "error", "message": f"File not found: {file_path}"}
-    except Exception as e:
-        logger.error(f"Error reading spreadsheet {file_path}: {e}")
-        return {"status": "error", "message": f"Error reading spreadsheet: {str(e)}"}
 
 def read_docx_file(file_path: str) -> Dict[str, Any]:
     """Reads text content from a DOCX file."""

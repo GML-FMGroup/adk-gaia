@@ -28,7 +28,18 @@ dependencies = [
     "Biopython",     # 用于处理 .pdb 文件
     "httpx",         # GenAI SDK 可能依赖，或者直接用于下载
     "python-pptx",
-    "tabulate"
+    "tabulate",
+    "numexpr",
+    "sympy",
+    "pint",
+    "playwright",
+    "arxiv",
+    "wikipedia",
+    "wikipedia-api",
+    "PyGithub",
+    "waybackpy",
+    "markdownify",
+    "readabilipy"
 ]
 
 [project.urls]
