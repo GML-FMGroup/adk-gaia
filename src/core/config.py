@@ -117,6 +117,14 @@ def get_runner_max_workers() -> int:
         logger.warning(f"Invalid runner_max_workers value '{workers}' in config. Using default 1.")
         return 1
 
+def get_gaia_split() -> str:
+    """Retrieves the GAIA split to run (e.g., 'validation', 'test'). Defaults to 'validation'."""
+    split = APP_CONFIG.get("gaia_split", "validation")
+    if split not in ["validation", "test"]:
+        logger.warning(f"Invalid gaia_split value '{split}' in config. Defaulting to 'validation'.")
+        return "validation"
+    return split
+
 # --- 确保在模块加载时打印日志 ---
 if not APP_CONFIG:
     # 这个分支现在理论上不会执行，因为上面有 fallback

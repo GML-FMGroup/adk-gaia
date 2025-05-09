@@ -9,5 +9,6 @@
   "runner_task_id": "c61d22de-5f6c-4958-a7f6-5e9707bd3466",
   "runner_first_n": 100,
   "runner_max_retries": 2,
-  "runner_max_workers": 1
+  "runner_max_workers": 1,
+  "gaia_split": "validation"
 }
