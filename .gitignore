@@ -137,7 +137,7 @@ cython_debug/
 Thumbs.db
 
 # Generated output files
-*.jsonl
+# *.jsonl
 
 # uv cache (if used locally, usually global)
 .uv_cache/
