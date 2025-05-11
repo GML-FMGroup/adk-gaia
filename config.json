@@ -10,5 +10,5 @@
   "runner_first_n": 100,
   "runner_max_retries": 2,
   "runner_max_workers": 1,
-  "gaia_split": "validation"
+  "gaia_split": "test"
 }
