@@ -53,18 +53,24 @@ except ImportError:
     logging.warning("PyGithub library not installed (`pip install PyGithub`). GitHub inspection disabled.")
     gh_client = None
 
-# Wayback Machine
+# waybackpy 相关的导入
 try:
     import waybackpy
+    from waybackpy import WaybackMachineCDXServerAPI # 重要：使用CDXServerAPI
+    from waybackpy.exceptions import NoCDXRecordFound, WaybackError
     WAYBACKPY_AVAILABLE = True
-    logging.info("Waybackpy library found.")
-    # 使用自定义 User-Agent
-    USER_AGENT = "ADKGaiaSolver/1.0 (https://github.com/your-repo; contact@example.com)" # 修改为你自己的信息
+    WAYBACKPY_VERSION = waybackpy.__version__ # 可选，用于调试
+    logger = logging.getLogger(__name__) # 假设logger已在模块级别定义
+    USER_AGENT = "ADKGaiaSolver/1.0 (YourProject/YourContact)"
+    logger.info(f"Waybackpy version {WAYBACKPY_VERSION} loaded.")
 except ImportError:
     WAYBACKPY_AVAILABLE = False
-    logging.warning("Waybackpy library not installed (`pip install waybackpy`). Wayback Machine access disabled.")
-    waybackpy = None
-    USER_AGENT = "ADKGaiaSolver/1.0" # Fallback User-Agent
+    logger = logging.getLogger(__name__)
+    logger.warning("waybackpy library not found. Wayback Machine functionality will be disabled.")
+    # 定义虚拟类以便代码在缺少库时仍能解析
+    class WaybackMachineCDXServerAPI: pass
+    class NoCDXRecordFound(Exception): pass
+    class WaybackError(Exception): pass
 
 # Readabilipy (用于静态页面清理)
 try:
@@ -147,7 +153,7 @@ def fetch_webpage_content(url: str, use_readability: bool = True) -> Dict[str, A
              content = response.text # Or response.content for binary? Decide based on need.
 
         # Truncate long content to prevent exceeding context limits
-        max_len = 20000 # Increased limit for web content
+        max_len = 100000 # Increased limit for web content
         if len(content) > max_len:
              logger.warning(f"Fetched content from {url} truncated to {max_len} characters.")
              content = content[:max_len] + f"\n... (truncated, original size ~{len(content)} chars)"
@@ -622,7 +628,8 @@ def inspect_github(request_details: str) -> Dict[str, Any]:
 
 def get_wayback_machine_snapshot(url: str, timestamp: Optional[str] = None) -> Dict[str, Any]:
     """
-    Fetches the content of a webpage snapshot from the Wayback Machine (archive.org).
+    Fetches the content of a webpage snapshot from the Wayback Machine (archive.org)
+    using WaybackMachineCDXServerAPI for better reliability.
 
     Args:
         url (str): The URL of the webpage to look up.
@@ -630,51 +637,88 @@ def get_wayback_machine_snapshot(url: str, timestamp: Optional[str] = None) -> D
                                    If None, fetches the most recent available snapshot.
 
     Returns:
-        dict: Dictionary with 'status', 'content' (snapshot text content, cleaned),
-              'snapshot_url', 'actual_timestamp', or 'message'.
+        dict: Dictionary with 'status', 'content' (snapshot text content, cleaned by fetch_webpage_content),
+              'snapshot_url', 'actual_timestamp', or 'message' if an error occurred.
     """
-    logger.info(f"Fetching Wayback Machine snapshot for URL: {url}, Timestamp: {timestamp}")
+    logger.info(f"Fetching Wayback Machine snapshot for URL: {url}, Timestamp: {timestamp} using CDXServerAPI")
     if not WAYBACKPY_AVAILABLE:
+        logger.warning("Waybackpy library not available. Cannot fetch snapshot.")
         return {"status": "error", "message": "Waybackpy library not available."}
 
     try:
-        wayback = waybackpy.Url(url, USER_AGENT)
+        # 使用 WaybackMachineCDXServerAPI
+        cdx_api = WaybackMachineCDXServerAPI(url, USER_AGENT)
+        snapshot_object = None  # 这将持有 waybackpy 的 Snapshot 对象
+
         if timestamp:
-            snapshot = wayback.near(timestamp=datetime.datetime.strptime(timestamp, '%Y%m%d%H%M%S'))
+            try:
+                dt_object = datetime.datetime.strptime(timestamp, '%Y%m%d%H%M%S')
+                logger.info(f"Attempting to find snapshot near {dt_object.isoformat()} using CDX.")
+                # waybackpy 3.0.6 的 near 方法接受年、月、日、时、分
+                snapshot_object = cdx_api.near(
+                    year=dt_object.year,
+                    month=dt_object.month,
+                    day=dt_object.day,
+                    hour=dt_object.hour,
+                    minute=dt_object.minute
+                )
+            except ValueError as ve:  # 来自 strptime 的错误
+                logger.error(f"Invalid timestamp format provided: {timestamp}. Error: {ve}")
+                return {"status": "error", "message": f"Invalid timestamp format: {timestamp}. Use YYYYMMDDhhmmss."}
+            except TypeError as te:  # 万一 near() 的参数仍有问题
+                logger.error(f"TypeError calling cdx_api.near for {url} with ts {timestamp}: {te}", exc_info=True)
+                return {"status": "error",
+                        "message": f"Wayback Machine CDX library error (TypeError in .near()): {str(te)}"}
         else:
-            snapshot = wayback.get_oldest_url() # Or wayback.get() for latest? Let's default to oldest for consistency with some GAIA tasks
-            # snapshot = wayback.get() # Use this for most recent
+            logger.info("Timestamp not provided, fetching the newest snapshot using CDX.")
+            snapshot_object = cdx_api.newest()
 
-        if not snapshot or not snapshot.archive_url:
-             return {"status": "error", "message": f"No Wayback Machine snapshot found for {url} near {timestamp or 'any time'}."}
+        if not snapshot_object or not hasattr(snapshot_object, 'archive_url') or not snapshot_object.archive_url:
+            logger.warning(
+                f"No Wayback Machine snapshot object obtained or it lacks an archive_url (from CDX) for {url}, timestamp: {timestamp or 'newest'}.")
+            # NoCDXRecordFound 应该在下面被捕获，这里是针对返回了非预期对象的情况
+            return {"status": "error",
+                    "message": f"No valid Wayback Machine snapshot found (from CDX) for {url} (timestamp: {timestamp or 'newest'})."}
 
-        logger.info(f"Fetching content from snapshot URL: {snapshot.archive_url}")
-        # Fetch the actual content from the snapshot URL
-        # IMPORTANT: Wayback Machine pages often have heavy JS/CSS. Simple requests might not render well.
-        # Using fetch_webpage_content with readability ON is a good first attempt.
-        fetched_data = fetch_webpage_content(snapshot.archive_url, use_readability=True)
+        logger.info(f"Fetching content from snapshot URL: {snapshot_object.archive_url}")
+        # 调用您项目中实际的 fetch_webpage_content 函数
+        fetched_data = fetch_webpage_content(snapshot_object.archive_url,
+                                             use_readability=True)  # 假设您的函数也接受 use_readability
 
         if fetched_data["status"] == "success":
-            logger.info(f"Successfully fetched and processed Wayback Machine snapshot.")
+            logger.info(f"Successfully fetched and processed Wayback Machine snapshot (from CDX).")
+            actual_ts_str = "N/A"
+            # Snapshot 对象 (来自 CDXServerAPI 的 .near() 或 .newest()) 应该有 datetime_timestamp 属性
+            if hasattr(snapshot_object, 'datetime_timestamp') and isinstance(snapshot_object.datetime_timestamp,
+                                                                             datetime.datetime):
+                actual_ts_str = snapshot_object.datetime_timestamp.isoformat()
+
             return {
                 "status": "success",
-                "content": fetched_data["content"], # Already cleaned/truncated by fetch_webpage_content
-                "snapshot_url": snapshot.archive_url,
-                "actual_timestamp": snapshot.timestamp.isoformat()
+                "content": fetched_data["content"],  # 由您的 fetch_webpage_content 清理和截断
+                "snapshot_url": snapshot_object.archive_url,
+                "actual_timestamp": actual_ts_str
             }
         else:
-             logger.error(f"Failed to fetch content from snapshot URL {snapshot.archive_url}: {fetched_data['message']}")
-             return {"status": "error", "message": f"Found snapshot URL but failed to fetch its content: {fetched_data['message']}"}
+            logger.error(
+                f"Failed to fetch content from snapshot URL {snapshot_object.archive_url}: {fetched_data['message']}")
+            return {"status": "error",
+                    "message": f"Found snapshot URL (from CDX) but failed to fetch its content: {fetched_data['message']}"}
 
-    except requests.exceptions.ConnectionError as e:
-         logger.error(f"Connection error accessing Wayback Machine for {url}: {e}")
-         return {"status": "error", "message": f"Connection error accessing Wayback Machine: {str(e)}"}
-    except ValueError as ve: # Handles bad timestamp format
-        logger.error(f"Invalid timestamp format provided: {timestamp}. Error: {ve}")
-        return {"status": "error", "message": f"Invalid timestamp format: {timestamp}. Use YYYYMMDDhhmmss."}
-    except waybackpy.exceptions.NoCDXRecordFound as ncdx:
-         logger.error(f"No snapshots found for {url} via Waybackpy: {ncdx}")
-         return {"status": "error", "message": f"No snapshots found for the URL: {url}"}
+    except requests.exceptions.ConnectionError as e:  # 网络连接错误 (可能在 fetch_webpage_content 中发生)
+        logger.error(f"Connection error for {url} or its snapshot: {e}")
+        return {"status": "error", "message": f"Connection error: {str(e)}"}
+    except NoCDXRecordFound:
+        logger.warning(f"NoCDXRecordFound for {url} with timestamp {timestamp}")
+        return {"status": "error", "message": f"No snapshots found for URL via CDX: {url}"}
+    except WaybackError as wbe:  # 其他 waybackpy 特定的错误
+        logger.error(f"A Waybackpy specific error occurred for {url} (CDX): {wbe}", exc_info=True)
+        return {"status": "error", "message": f"Wayback Machine CDX library error: {str(wbe)}"}
+    except AttributeError as ae:
+        # 例如，如果 snapshot_object 为 None，尝试访问 .archive_url
+        logger.error(f"Attribute error during Wayback Machine CDX operation for {url}: {ae}", exc_info=True)
+        return {"status": "error",
+                "message": f"Wayback Machine internal library error (AttributeError with CDX): {str(ae)}"}
     except Exception as e:
-        logger.error(f"Error fetching Wayback Machine snapshot for {url}: {e}", exc_info=True)
-        return {"status": "error", "message": f"Wayback Machine fetch failed: {str(e)}"}
+        logger.error(f"Generic error fetching Wayback Machine snapshot for {url} (CDX): {e}", exc_info=True)
+        return {"status": "error", "message": f"Wayback Machine fetch failed (Generic with CDX): {str(e)}"}
