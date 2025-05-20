@@ -15,6 +15,8 @@ from src.tools.spreadsheet_tools import (
     # read_spreadsheet # We can replace this with more specific tools or keep it as a fallback
 )
 
+from src.core.debug_logger import adk_before_model_callback, adk_after_model_callback
+
 logger = logging.getLogger(__name__)
 
 SPREADSHEET_AGENT_MODEL = get_model("specialist_model_flash") # Flash might still be okay
@@ -63,6 +65,8 @@ spreadsheet_data_agent = LlmAgent(
         calculate_stat_tool,
         # read_spreadsheet_tool, # Optional fallback
     ],
+    before_model_callback=adk_before_model_callback,
+    after_model_callback=adk_after_model_callback
 )
 
 logger.info(f"SpreadsheetDataAgent initialized with model: {SPREADSHEET_AGENT_MODEL}")

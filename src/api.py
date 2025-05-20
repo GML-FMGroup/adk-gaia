@@ -84,29 +84,38 @@ async def chat_endpoint(request: ChatRequest):
     """Receives a GAIA task and returns the agent's final answer."""
     user_id = request.user_id
     task_id = request.task_id
-    session_id = request.session_id or str(uuid.uuid4()) # Use provided or generate new
+    actual_session_id = request.session_id or str(uuid.uuid4())
 
     # --- Session Management ---
     try:
         session = session_service.get_session(
-            app_name=APP_NAME, user_id=user_id, session_id=session_id
+            app_name=APP_NAME, user_id=user_id, session_id=actual_session_id
         )
     except KeyError:
         session = None
     except Exception as e:
-        logger.warning(f"Error retrieving session {session_id}: {e}")
+        logger.warning(f"Error retrieving session {actual_session_id}: {e}")
         session = None
 
+    initial_state_for_session = {
+        "current_task_id": task_id,
+        "current_session_id_for_debug_log": actual_session_id  # 新增
+    }
+    logger.info(f"--- DEBUG: Session state being set/updated with: {initial_state_for_session} for session {actual_session_id} ---")
+
     if not session:
-        logger.info(f"Creating new session: {session_id} for user: {user_id}")
+        logger.info(
+            f"Creating new session: {actual_session_id} for user: {user_id} with state: {initial_state_for_session}")
         session = session_service.create_session(
             app_name=APP_NAME,
             user_id=user_id,
-            session_id=session_id,
-            state={}  # 创建空状态的会话
+            session_id=actual_session_id,  # 使用 actual_session_id
+            state=initial_state_for_session
         )
     else:
-        logger.info(f"Using existing session: {session_id}")
+        logger.info(f"Using existing session: {actual_session_id}, updating state with: {initial_state_for_session}")
+        session.state.update(initial_state_for_session)
+        session_service.update_session(session)  # 保存更新后的会话
 
     # --- Prepare Input ---
     user_message = request.question
@@ -119,8 +128,8 @@ async def chat_endpoint(request: ChatRequest):
 
     try:
         logger.info(
-            f"Running agent for session {session_id}, task {task_id} with message: {user_message[:200]}...")  # Log part of message
-        async for event in runner.run_async(user_id=user_id, session_id=session_id, new_message=content):
+            f"Running agent for session {actual_session_id}, task {task_id} with message: {user_message[:200]}...")
+        async for event in runner.run_async(user_id=user_id, session_id=actual_session_id, new_message=content):
             try:
                 # 尝试序列化事件，排除 None 值以减少冗余
                 event_dict = event.model_dump(exclude_none=True, warnings=False)
@@ -169,7 +178,7 @@ async def chat_endpoint(request: ChatRequest):
 
         # --- Return Response ---
     return ChatResponse(
-        session_id=session_id,
+        session_id=actual_session_id,
         model_answer=final_answer,
         reasoning_trace=reasoning_events,
         error=error_message

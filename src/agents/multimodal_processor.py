@@ -10,6 +10,8 @@ from src.tools.file_tools import (
     process_image_with_gemini
 )
 
+from src.core.debug_logger import adk_before_model_callback, adk_after_model_callback
+
 logger = logging.getLogger(__name__)
 
 MULTIMODAL_PROCESSOR_MODEL = get_model("specialist_model_pro") # Pro 模型以获得更好的多模态能力
@@ -44,6 +46,8 @@ multimodal_processor_agent = LlmAgent(
         process_audio_tool,
         process_image_tool,
     ],
+    before_model_callback=adk_before_model_callback,
+    after_model_callback=adk_after_model_callback
 )
 
 logger.info(f"MultimodalProcessorAgent initialized with model: {MULTIMODAL_PROCESSOR_MODEL}")

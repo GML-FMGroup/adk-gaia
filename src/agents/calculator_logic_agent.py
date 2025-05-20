@@ -13,6 +13,8 @@ from src.tools.calculation_tools import (
     newtons_method_solver
 )
 
+from src.core.debug_logger import adk_before_model_callback, adk_after_model_callback
+
 logger = logging.getLogger(__name__)
 
 CALCULATOR_LOGIC_MODEL = get_model("specialist_model_flash") # Flash 模型通常足够
@@ -63,6 +65,8 @@ calculator_logic_agent = LlmAgent(
         calculate_checksum_tool,
         newtons_method_tool,
     ],
+    before_model_callback=adk_before_model_callback,
+    after_model_callback=adk_after_model_callback
 )
 
 logger.info(f"CalculatorLogicAgent initialized with model: {CALCULATOR_LOGIC_MODEL}")

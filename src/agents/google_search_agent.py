@@ -4,6 +4,8 @@ from google.adk.agents import LlmAgent
 from google.adk.tools import google_search
 from src.core.config import get_model
 
+from src.core.debug_logger import adk_before_model_callback, adk_after_model_callback
+
 logger = logging.getLogger(__name__)
 
 GOOGLE_SEARCH_MODEL = get_model("specialist_model_flash")
@@ -27,7 +29,9 @@ google_search_agent = LlmAgent(
         "If multiple distinct facts or numbers are present for the same query, try to present them clearly, noting any ambiguities if possible (e.g., 'Source A states X, while Source B states Y for Z'). "
         "Do not add any other explanation or summary. Do not attempt any other action."
     ),
-    tools=[google_search] # Only the built-in tool
+    tools=[google_search], # Only the built-in tool
+    before_model_callback=adk_before_model_callback,
+    after_model_callback=adk_after_model_callback
 )
 
 logger.info(f"GoogleSearchAgent initialized with model: {GOOGLE_SEARCH_MODEL}")

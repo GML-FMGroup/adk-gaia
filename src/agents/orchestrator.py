@@ -16,6 +16,8 @@ from .specialized_file_agent import specialized_file_agent
 from .calculator_logic_agent import calculator_logic_agent
 from .filesystem_agent import filesystem_agent
 
+from src.core.debug_logger import adk_before_model_callback, adk_after_model_callback
+
 logger = logging.getLogger(__name__)
 
 ORCHESTRATOR_MODEL = get_model("orchestrator_model")
@@ -87,6 +89,8 @@ orchestrator_agent = LlmAgent(
         calculator_logic_tool,
         filesystem_tool,
     ],
+    before_model_callback=adk_before_model_callback,
+    after_model_callback=adk_after_model_callback
 )
 
 logger.info(f"OrchestratorAgent initialized with model: {ORCHESTRATOR_MODEL}")

@@ -13,6 +13,8 @@ from src.tools.filesystem_tools import (
     get_relative_path,
 )
 
+from src.core.debug_logger import adk_before_model_callback, adk_after_model_callback
+
 logger = logging.getLogger(__name__)
 
 FILESYSTEM_AGENT_MODEL = get_model("specialist_model_flash")
@@ -56,6 +58,8 @@ filesystem_agent = LlmAgent(
         get_abs_path_tool,
         get_rel_path_tool,
     ],
+    before_model_callback=adk_before_model_callback,
+    after_model_callback=adk_after_model_callback
 )
 
 logger.info(f"FilesystemAgent initialized with model: {FILESYSTEM_AGENT_MODEL}")

@@ -12,6 +12,8 @@ from src.tools.file_tools import (
     process_pdf_with_gemini # Gemini PDF 处理
 )
 
+from src.core.debug_logger import adk_before_model_callback, adk_after_model_callback
+
 logger = logging.getLogger(__name__)
 
 DOCUMENT_PROCESSOR_MODEL = get_model("specialist_model_pro") # 使用 Pro 模型以获得更好的文档理解能力
@@ -52,6 +54,8 @@ document_processor_agent = LlmAgent(
         read_pptx_tool,
         process_pdf_tool,
     ],
+    before_model_callback=adk_before_model_callback,
+    after_model_callback=adk_after_model_callback
 )
 
 logger.info(f"DocumentProcessorAgent initialized with model: {DOCUMENT_PROCESSOR_MODEL}")

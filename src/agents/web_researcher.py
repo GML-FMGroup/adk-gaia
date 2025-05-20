@@ -15,6 +15,8 @@ from src.tools.web_tools import (
     get_wayback_machine_snapshot,
 )
 
+from src.core.debug_logger import adk_before_model_callback, adk_after_model_callback
+
 logger = logging.getLogger(__name__)
 
 
@@ -65,7 +67,9 @@ web_researcher_agent = LlmAgent(
         fetch_wikipedia_tool,
         inspect_github_tool,
         get_wayback_snapshot_tool,
-    ]
+    ],
+    before_model_callback=adk_before_model_callback,
+    after_model_callback=adk_after_model_callback
 )
 
 logger.info(f"WebResearcherAgent initialized with model: {WEB_RESEARCHER_MODEL}")

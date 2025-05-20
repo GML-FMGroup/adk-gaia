@@ -9,6 +9,8 @@ from src.tools.code_tools import execute_local_python_code
 # 导入未来可能需要的自定义代码工具
 # from src.tools.code_tools import run_biopython_script, etc.
 
+from src.core.debug_logger import adk_before_model_callback, adk_after_model_callback
+
 logger = logging.getLogger(__name__)
 
 CODE_EXECUTOR_MODEL = get_model("specialist_model_flash")
@@ -39,7 +41,9 @@ code_executor_agent = LlmAgent(
     tools=[
         execute_local_python_tool,
         # Add other custom code tools here in the future
-    ]
+    ],
+    before_model_callback=adk_before_model_callback,
+    after_model_callback=adk_after_model_callback
 )
 
 logger.info(f"CodeExecutorAgent initialized with model: {CODE_EXECUTOR_MODEL}")

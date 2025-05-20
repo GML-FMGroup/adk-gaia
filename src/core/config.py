@@ -125,6 +125,10 @@ def get_gaia_split() -> str:
         return "validation"
     return split
 
+def should_save_debug_chat_log() -> bool:
+    """Checks if the debug chat log saving is enabled."""
+    return APP_CONFIG.get("save_debug_chat_log", False) # 默认为 False
+
 # --- 确保在模块加载时打印日志 ---
 if not APP_CONFIG:
     # 这个分支现在理论上不会执行，因为上面有 fallback
@@ -139,3 +143,4 @@ else:
     logger.info(f"Runner Strategy: {get_runner_strategy()}")
     logger.info(f"Runner Max Retries: {get_runner_max_retries()}")
     logger.info(f"Runner Max Workers: {get_runner_max_workers()}")
+    logger.info(f"Save Debug Chat Log: {should_save_debug_chat_log()}")
