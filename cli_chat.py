@@ -57,32 +57,27 @@ def run_cli_chat():
             print("Sending request to agent...")
             start_time = time.time()
             try:
-                response = requests.post(CHAT_ENDPOINT, json=request_payload, timeout=300)
+                response = requests.post(CHAT_ENDPOINT, json=request_payload, timeout=300) # 增加超时时间
                 duration = time.time() - start_time
 
                 if response.status_code == 200:
                     response_data = response.json()
                     model_answer = response_data.get("model_answer")
+                    reason = response_data.get("reasoning_trace") # 获取 REASON
                     error = response_data.get("error")
 
-                    print(f"\n[Agent] ({duration:.2f}s): ", end="")
+                    print(f"\n[Agent] ({duration:.2f}s):") # 换行打印
                     if error:
-                        print(f"Error: {error}")
+                        print(f"  Error: {error}")
                     elif model_answer:
-                        print(model_answer)
-                        # 可选：打印部分追踪信息进行调试
-                        # trace = response_data.get("reasoning_trace")
-                        # if trace and isinstance(trace, list) and len(trace) > 0:
-                        #     print("\n--- Trace Snippet ---")
-                        #     # 打印最后几个事件的关键信息
-                        #     for event in trace[-3:]: # 最后3个事件
-                        #         author = event.get('author', 'Unknown')
-                        #         content_str = str(event.get('content', {}))[:100] # 截断内容
-                        #         print(f"  Author: {author}, Content: {content_str}...")
-                        #     print("--------------------")
-
+                        print(f"  FINAL_ANSWER: {model_answer}")
+                        if reason:
+                            print(f"  REASON: {reason}")
                     else:
-                        print("Agent returned an empty response.")
+                        print("  Agent returned an empty or unexpected response structure.")
+                        if reason: # 即使答案为空，也可能想看原因
+                            print(f"  REASON (if any): {reason}")
+
 
                 else:
                     print(f"\nError from API (Status {response.status_code}): {response.text[:500]}") # 打印部分错误信息
@@ -100,6 +95,5 @@ def run_cli_chat():
             break
 
 if __name__ == "__main__":
-    import time # 引入 time 模块
     print("--- GAIA Agent CLI Chat ---")
     run_cli_chat()

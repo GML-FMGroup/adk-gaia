@@ -75,7 +75,7 @@ def read_local_file(relative_path: str) -> Dict[str, Any]:
 
         logger.info(f"Successfully read local file: {relative_path}")
         # Truncate long content
-        max_len = 10000
+        max_len = 100000
         if len(content) > max_len:
             logger.warning(f"Local file content truncated: {relative_path}")
             content = content[:max_len] + "\n... (truncated)"

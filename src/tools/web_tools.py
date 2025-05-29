@@ -681,10 +681,9 @@ def get_wayback_machine_snapshot(url: str, timestamp: Optional[str] = None) -> D
                     "message": f"No valid Wayback Machine snapshot found (from CDX) for {url} (timestamp: {timestamp or 'newest'})."}
 
         logger.info(f"Fetching content from snapshot URL: {snapshot_object.archive_url}")
-        # 调用您项目中实际的 fetch_webpage_content 函数
-        fetched_data = fetch_webpage_content(snapshot_object.archive_url,
-                                             use_readability=True)  # 假设您的函数也接受 use_readability
 
+        fetched_data = fetch_webpage_content(snapshot_object.archive_url,
+                                             use_readability=True)
         if fetched_data["status"] == "success":
             logger.info(f"Successfully fetched and processed Wayback Machine snapshot (from CDX).")
             actual_ts_str = "N/A"
@@ -695,7 +694,7 @@ def get_wayback_machine_snapshot(url: str, timestamp: Optional[str] = None) -> D
 
             return {
                 "status": "success",
-                "content": fetched_data["content"],  # 由您的 fetch_webpage_content 清理和截断
+                "content": fetched_data["content"],
                 "snapshot_url": snapshot_object.archive_url,
                 "actual_timestamp": actual_ts_str
             }

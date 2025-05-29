@@ -37,25 +37,32 @@ calculate_stat_tool = FunctionTool(func=calculate_column_stat)
 spreadsheet_data_agent = LlmAgent(
     name="SpreadsheetDataAgent",
     model=SPREADSHEET_AGENT_MODEL,
+    # description 和 instruction 先使用中文进行人工调试，稳定之后再使用LLM翻译为英文
     description=( # 更新描述
-        "Specializes in reading, analyzing, and querying data from spreadsheet files "
-        "like Excel (.xlsx) and CSV (.csv). Can get sheet info, sheet names, cell values, "
-        "filter data with queries, and calculate column statistics."
+        "专门用于读取、分析和查询电子表格文件（如 Excel .xlsx, .xls 和 CSV .csv）中的数据。 "
+        "接收一个包含任务指令和电子表格绝对文件路径的 'request' 字符串。 "
+        "根据指令解析并调用以下工具之一：\n"
+        "- `get_spreadsheet_info`: 提供电子表格的元数据（如形状、列名、数据类型、基本统计、样本行）。需要参数: `file_path` (str, 绝对路径)。可选参数: `sheet_name` (str, 工作表名称或索引)。\n"
+        "- `get_sheet_names`: 列出 Excel 文件中的所有工作表名称。需要参数: `file_path` (str, 绝对路径)。仅适用于 Excel 文件。\n"
+        "- `get_cell_value`: 获取指定单元格的值。需要参数: `file_path` (str, 绝对路径), `cell_coordinate` (str, 例如 'B5' 或 'Sheet1!B5')。可选参数: `sheet_name` (str, 如果未在 cell_coordinate 中指定)。\n"
+        "- `query_spreadsheet`: 使用 Pandas 查询字符串筛选电子表格中的数据。需要参数: `file_path` (str, 绝对路径), `query_string` (str, 例如 \"`列名 A` > 10 and `列名 B` == 'some_value'\")。可选参数: `sheet_name` (str)。\n"
+        "- `calculate_column_stat`: 计算指定列的统计数据。需要参数: `file_path` (str, 绝对路径), `column_name` (str), `stat_type` (str, 例如 'sum', 'mean', 'median', 'std', 'count')。可选参数: `sheet_name` (str)。\n"
+        "协调器应确保 'request' 字符串清晰地指明要执行的操作以及所有必需的参数，包括正确的绝对文件路径和任何工作表特定信息。"
     ),
-    instruction=( # *** 大幅更新指令以反映新工具 ***
-        "You are an expert spreadsheet data analyst. You will receive a single string argument named `request` "
-        "containing instructions and an absolute file path to a spreadsheet.\n"
-        "**IMPORTANT:** Parse the `request` string to determine the specific task and required parameters, then call the MOST appropriate tool.\n"
-        "**Available Tools:**\n"
-        "- `get_spreadsheet_info`: Provides metadata (shape, columns, types, stats, sample rows). Requires `file_path`, optional `sheet_name`.\n"
-        "- `get_sheet_names`: Lists all sheet names in an Excel file. Requires `file_path`.\n"
-        "- `get_cell_value`: Gets the value of a single cell. Requires `file_path`, `cell_coordinate` (e.g., 'B5'), optional `sheet_name`.\n"
-        "- `query_spreadsheet`: Filters data using a pandas query string. Requires `file_path`, `query_string`, optional `sheet_name`.\n"
-        "- `calculate_column_stat`: Calculates statistics for a column. Requires `file_path`, `column_name`, `stat_type` (e.g., 'sum', 'mean', 'std'), optional `sheet_name`.\n\n"
-        "**Workflow:**\n"
-        "1.  **Parse Request:** Extract the **absolute file path** and the **specific action** (get info, get sheets, get cell, query, calculate stat) from the `request`. Also extract all necessary parameters for that action (e.g., `sheet_name`, `cell_coordinate`, `query_string`, `column_name`, `stat_type`).\n"
-        "2.  **Select & Execute Tool:** Call the chosen tool with the correctly named arguments based on the parsed request.\n"
-        "3.  **Return Result:** Relay the relevant information from the tool's output dictionary (e.g., 'info', 'sheet_names', 'value', 'filtered_data', 'result'). If the status is 'error', return the 'message'."
+    instruction=(
+        "你是一位专业的电子表格数据分析师。你会收到一个名为 `request` 的字符串参数，"
+        "其中包含指令和一个指向电子表格的绝对文件路径。\n"
+        "**重要：** 解析 `request` 字符串以确定具体任务和所需参数，然后调用最合适的工具。\n"
+        "**可用工具：**\n"
+        "- `get_spreadsheet_info`：提供元数据（形状、列、类型、统计信息、样本行）。需要 `file_path`，可选 `sheet_name`。\n"
+        "- `get_sheet_names`：列出 Excel 文件中的所有工作表名称。需要 `file_path`。\n"
+        "- `get_cell_value`：获取单个单元格的值。需要 `file_path`、`cell_coordinate`，可选 `sheet_name`。\n"
+        "- `query_spreadsheet`：使用 pandas 查询字符串筛选数据。需要 `file_path`、`query_string`，可选 `sheet_name`。\n"
+        "- `calculate_column_stat`：计算列的统计数据。需要 `file_path`、`column_name`、`stat_type`（例如，'sum'、'mean'、'std'），可选 `sheet_name`。\n\n"
+        "**工作流程：**\n"
+        "1.  **解析请求：** 从 `request` 中提取**绝对文件路径**和**具体操作**（获取信息、获取工作表、获取单元格、查询、计算统计数据）。同时提取该操作所需的所有必要参数（例如，`sheet_name`、`cell_coordinate`、`query_string`、`column_name`、`stat_type`）。\n"
+        "2.  **选择并执行工具：** 根据解析的请求，使用正确命名的参数调用所选工具。\n"
+        "3.  **返回结果：** 传递工具输出字典中的相关信息（例如，'info'、'sheet_names'、'value'、'filtered_data'、'result'）。如果状态为 'error'，则返回 'message'。"
     ),
     tools=[ # 列出所有新工具
         get_info_tool,

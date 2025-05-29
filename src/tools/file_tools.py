@@ -32,12 +32,10 @@ try:
     from google import genai
     from google.genai import types as genai_types
     GENAI_SDK_AVAILABLE = True
-    # 不再调用 genai.configure()
-    # Client 实例将在需要时创建
     logger.info("google-genai SDK found.")
 except ImportError:
     logger.error("google-genai SDK not installed. Multimodal features disabled.")
-    genai = None # 保留 genai 为 None 以便后续检查
+    genai = None
     genai_types = None
     GENAI_SDK_AVAILABLE = False
 
@@ -237,8 +235,8 @@ def process_pdf_with_gemini(file_path: str, prompt: str) -> Dict[str, Any]:
 
         # 使用 genai_types
         pdf_part = genai_types.Part.from_bytes(data=pdf_bytes, mime_type='application/pdf')
-        # 考虑从配置中获取模型名称
-        model_name = "gemini-2.0-flash" # 应该选择支持文档处理的模型，如 gemini-1.5-flash 或更高版本
+
+        model_name = "gemini-2.0-flash"
 
         # 检查模型支持 (可选但推荐)
         # try:
@@ -296,8 +294,8 @@ def process_audio_with_gemini(file_path: str, prompt: str) -> Dict[str, Any]:
 
         # 使用 genai_types
         audio_part = genai_types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
-        # 考虑从配置获取模型
-        model_name = "gemini-1.5-flash" # 或者 gemini-1.5-pro, 这些模型音频处理能力更强
+
+        model_name = "gemini-2.0-flash"
 
         # 检查模型支持 (可选)
         # try:
@@ -351,9 +349,8 @@ def process_image_with_gemini(file_path: str, prompt: str) -> Dict[str, Any]:
             image_bytes = f.read()
 
         image_part = genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
-        # 考虑从配置获取模型，确保模型支持图像输入
-        model_name = "gemini-1.5-flash" # 或者 gemini-1.5-pro / gemini-2.0-flash / gemini-2.5-flash/pro
-        # model_name = "gemini-2.0-flash" # <-- 如果你的默认模型支持图像
+
+        model_name = "gemini-2.0-flash"
 
         # 可选：检查模型能力
         # try:

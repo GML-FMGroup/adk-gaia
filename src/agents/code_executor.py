@@ -24,23 +24,24 @@ execute_local_python_tool = FunctionTool(func=execute_local_python_code)
 code_executor_agent = LlmAgent(
     name="CodeExecutorAgent",
     model=CODE_EXECUTOR_MODEL,
+    # description 和 instruction 先使用中文进行人工调试，稳定之后再使用LLM翻译为英文
     description=( # 更新描述
-        "Specializes in executing provided Python code snippets locally and securely within the project's working directory. "
-        "Can also handle future custom execution tools (e.g., BioPython, other languages)."
+        "专门在项目的工作目录内本地且安全地执行 Python 代码片段。 "
+        "与 `BuiltinCodeExecutorAgent` 不同，此智能体执行的代码可以与本地项目环境交互（例如，读写项目内的文件，如果代码本身包含此类逻辑）。"
+        "主要工具是 `execute_local_python_code`，它需要一个名为 `code` (str) 的参数，包含要执行的 Python 代码。"
+        "返回代码执行的 stdout 和 stderr。"
+        "适用于需要本地环境交互或 `BuiltinCodeExecutorAgent` 功能不足的 Python 代码执行场景。"
     ),
     instruction=( # 更新指令
-        "You are a specialized code execution agent. Your primary capability is executing Python code locally using the `execute_local_python_code` tool.\n"
-        "**Workflow:**\n"
-        "1. You will receive a `request` string containing the Python code to execute.\n"
-        "2. Use the `execute_local_python_code` tool, passing the code string as the `code` argument.\n"
-        "3. Return the standard output (`stdout`) and standard error (`stderr`) from the execution result dictionary provided by the tool.\n"
-        "4. If the tool indicates an error status, relay the error message or stderr.\n"
-        "5. (Future capabilities might involve other tools for specific languages or libraries.)\n"
-        "6. **DO NOT** use the built-in code executor. Only use the provided `execute_local_python_code` tool."
+        "你是一个专门的代码执行智能体。你的主要能力是使用 `execute_local_python_code` 工具在本地执行 Python 代码。\n"
+        "**工作流程：**\n"
+        "1. 你会收到一个包含要执行的 Python 代码的 `request` 字符串。\n"
+        "2. 使用 `execute_local_python_code` 工具，将代码字符串作为 `code` 参数传递。\n"
+        "3. 从工具提供的执行结果字典中返回标准输出 (`stdout`) 和标准错误 (`stderr`)。\n"
+        "4. 如果工具指示错误状态，则传达错误消息或 stderr。\n"
     ),
     tools=[
         execute_local_python_tool,
-        # Add other custom code tools here in the future
     ],
     before_model_callback=adk_before_model_callback,
     after_model_callback=adk_after_model_callback

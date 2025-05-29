@@ -28,7 +28,7 @@ except ImportError:
 GAIA_SPLIT = "validation" # 评估验证集
 GAIA_SPLIT_DIR = os.path.join(GAIA_BASE_DIR, GAIA_SPLIT) if GAIA_BASE_DIR else None
 
-# --- 评分函数 (保持不变) ---
+# --- 评分函数 ---
 def normalize_number_str(number_str: str) -> float:
     """Converts a string to a float after removing common units/commas."""
     if number_str is None: return float("inf")
@@ -139,7 +139,6 @@ def question_scorer(model_answer: Optional[str], ground_truth: Optional[str]) ->
 # --- Helper Functions ---
 def load_jsonl(file_path: str) -> List[Dict[str, Any]]:
     """Loads data from a JSON Lines file."""
-    # ... (代码同上一个版本) ...
     data = []
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -283,15 +282,14 @@ def evaluate_results(results_file: str, metadata_file: str):
         logger.info("  --------------------------------")
     logger.info("----------------------------------")
 
-    # 可选：将详细评估结果保存到文件
-    # eval_output_file = results_file.replace(".jsonl", "_evaluation_details.jsonl")
-    # try:
-    #     with open(eval_output_file, 'w', encoding='utf-8') as f:
-    #         for detail in evaluation_details:
-    #             f.write(json.dumps(detail) + '\n')
-    #     logger.info(f"Detailed evaluation results saved to: {eval_output_file}")
-    # except IOError as e:
-    #     logger.error(f"Could not write detailed evaluation results to {eval_output_file}: {e}")
+    eval_output_file = results_file.replace(".jsonl", "_evaluation_details.jsonl")
+    try:
+        with open(eval_output_file, 'w', encoding='utf-8') as f:
+            for detail in evaluation_details:
+                f.write(json.dumps(detail, ensure_ascii=False) + '\n')
+        logger.info(f"Detailed evaluation results saved to: {eval_output_file}")
+    except IOError as e:
+        logger.error(f"Could not write detailed evaluation results to {eval_output_file}: {e}")
 
 
 # --- Command Line Argument Parsing ---

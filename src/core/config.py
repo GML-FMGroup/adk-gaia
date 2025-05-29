@@ -45,15 +45,12 @@ except (FileNotFoundError, ValueError, RuntimeError) as e:
     }
     logger.warning("Warning: Using default fallback configuration.")
 
-# --- 修改 get_model 函数 ---
 def get_model(model_key: str) -> Optional[str]:
     """Safely retrieves a model name directly from the loaded configuration."""
-    # 直接从 APP_CONFIG 获取，不再查找嵌套的 "models" 字典
     model_name = APP_CONFIG.get(model_key)
     if model_name is None:
         logger.warning(f"Model key '{model_key}' not found in config.json.")
     return model_name
-# --- 结束修改 ---
 
 def get_gaia_data_dir() -> Optional[str]:
     """Retrieves the GAIA data directory path and ensures it's absolute."""

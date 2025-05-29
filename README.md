@@ -45,13 +45,13 @@ GOOGLE_GENAI_USE_VERTEXAI=FALSE
 ## Performance / Todo
 
 ### Accurancy of GAIA(Latest)
-**Validation Set ( 2025-05-20 ):**
+**Validation Set ( 2025-05-28 ):**
 | Level   | Tasks Evaluated | Correct Answers | Accuracy (%) |
 | :------ | :-------------- | :-------------- | :----------- |
-| Level 1 | 53              | 38              | 71.70%       |
-| Level 2 | 86              | 43              | 50.00%       |
-| Level 3 | 26              | 10              | 38.46%       |
-| **Overall** | **165**         | **91**          | **55.15%**   |
+| Level 1 | 53              | 40              | 75.47%       |
+| Level 2 | 86              | 49              | 56.98%       |
+| Level 3 | 26              | 11             | 42.31%       |
+| **Overall** | **165**         | **100**          | **60.61%**   |
 
 **Test Set ( 2025-05-10 ):**
 * Accuracy: 37.54% * from GAIA official website

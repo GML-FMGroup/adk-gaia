@@ -1,14 +1,14 @@
 {
-  "orchestrator_model": "gemini-2.5-flash-preview-04-17",
-  "specialist_model_flash": "gemini-2.5-flash-preview-04-17",
-  "specialist_model_pro": "gemini-2.5-flash-preview-04-17",
+  "orchestrator_model": "gemini-2.5-flash-preview-05-20",
+  "specialist_model_flash": "gemini-2.5-flash-preview-05-20",
+  "specialist_model_pro": "gemini-2.5-flash-preview-05-20",
   "ollama_model": null,
   "gaia_data_dir": "./GAIA/2023",
   "api_port": 9012,
   "runner_strategy": "all",
   "runner_task_id": "",
   "runner_first_n": 100,
-  "runner_max_retries": 2,
+  "runner_max_retries": 4,
   "runner_max_workers": 1,
   "gaia_split": "validation",
   "save_debug_chat_log": true

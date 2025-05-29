@@ -16,7 +16,7 @@ from .config import should_save_debug_chat_log, get_gaia_data_dir
 logger = logging.getLogger(__name__)
 
 GAIA_BASE_DIR = get_gaia_data_dir()
-DEBUG_LOG_DIR_NAME = "debug_chat_logs_json_by_task"  # 再次修改目录名以区分
+DEBUG_LOG_DIR_NAME = "debug_chat_logs_json_by_task"
 
 if GAIA_BASE_DIR:
   DEBUG_LOG_DIR = os.path.join(GAIA_BASE_DIR, DEBUG_LOG_DIR_NAME)
