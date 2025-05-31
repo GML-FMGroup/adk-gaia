@@ -10,7 +10,7 @@ This project is aim to use [ADK](https://google.github.io/adk-docs/) and [A2A](h
 
 The system employs a hierarchical multi-agent architecture where a central `OrchestratorAgent` analyzes incoming GAIA tasks and delegates sub-tasks to a suite of specialized agents, each equipped with specific tools and instructions for functions like web searching, document processing, code execution, or calculations. This division of labor allows each specialist agent to focus on its core competency, with the orchestrator coordinating their efforts to achieve the final solution.
 
-## Start 🏁
+## Start 🚀
 
 ### 1. Configure the environment through `pyproject.toml` ⚙️
 
