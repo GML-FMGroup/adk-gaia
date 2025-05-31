@@ -2,9 +2,9 @@
 
 ## Introduction
 
-GAIA is made of more than 450 non-trivial question with an unambiguous answer, requiring different levels of tooling and autonomy to solve. It is therefore divided in 3 levels, where level 1 should be breakable by very good LLMs, and level 3 indicate a strong jump in model capabilities. Each level is divided into a fully public dev set for validation, and a test set with private answers and metadata.
+[GAIA](https://huggingface.co/gaia-benchmark) is made of more than 450 non-trivial question with an unambiguous answer, requiring different levels of tooling and autonomy to solve. It is therefore divided in 3 levels, where level 1 should be breakable by very good LLMs, and level 3 indicate a strong jump in model capabilities. Each level is divided into a fully public dev set for validation, and a test set with private answers and metadata.
 
-This project is aim to use [ADK](https://google.github.io/adk-docs/) and [A2A](https://github.com/google/A2A) protocol to solve [GAIA](https://huggingface.co/gaia-benchmark)
+This project is aim to use [ADK](https://google.github.io/adk-docs/) and [A2A](https://github.com/google/A2A) protocol to solve GAIA
 
 ## Architecture
 
