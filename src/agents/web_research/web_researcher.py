@@ -5,7 +5,7 @@ from google.adk.tools import FunctionTool
 from src.core.config import get_model
 
 # 导入自定义的 web tools 函数
-from src.tools.web_tools import (
+from src.agents.web_research.tools import (
     fetch_webpage_content,
     interact_with_dynamic_page,
     search_arxiv,

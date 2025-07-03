@@ -1,15 +1,15 @@
 # src/agents/__init__.py
-from .orchestrator import orchestrator_agent
-from .google_search_agent import google_search_agent
-from .builtin_code_executor_agent import builtin_code_executor_agent
-from .web_researcher import web_researcher_agent
-from .code_executor import code_executor_agent
-from .document_processor import document_processor_agent
-from .spreadsheet_data_agent import spreadsheet_data_agent # 确保导入路径正确
-from .multimodal_processor import multimodal_processor_agent
-from .specialized_file_agent import specialized_file_agent
-from .calculator_logic_agent import calculator_logic_agent
-from .filesystem_agent import filesystem_agent
+from ..orchestrator.orchestrator import orchestrator_agent
+from .google_search.google_search_agent import google_search_agent
+from .builtin_code_executor.builtin_code_executor_agent import builtin_code_executor_agent
+from .web_research.web_researcher import web_researcher_agent
+from .code_executor.code_executor import code_executor_agent
+from .document_processor.document_processor import document_processor_agent
+from .spreadsheet_data.spreadsheet_data_agent import spreadsheet_data_agent # 确保导入路径正确
+from .multimodal_processor.multimodal_processor import multimodal_processor_agent
+from .specialized_file.specialized_file_agent import specialized_file_agent
+from .calculator.calculator_logic_agent import calculator_logic_agent
+from .filesystem.filesystem_agent import filesystem_agent
 
 root_agent = orchestrator_agent
 

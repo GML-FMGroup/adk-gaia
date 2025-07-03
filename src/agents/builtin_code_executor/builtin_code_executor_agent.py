@@ -29,10 +29,12 @@ builtin_code_executor_agent = LlmAgent(
         "使用 `built_in_code_execution` 工具执行该代码。"
         "返回代码执行生成的标准输出 (stdout) 或错误消息。"
     ),
-    code_executor=BuiltInCodeExecutor(), # Only the built-in tool
+    code_executor=BuiltInCodeExecutor(),  # Only the built-in tool
     before_model_callback=adk_before_model_callback,
-    after_model_callback=adk_after_model_callback
+    after_model_callback=adk_after_model_callback,
 )
 
-logger.info(f"BuiltinCodeExecutorAgent initialized with model: {BUILTIN_CODE_EXECUTOR_MODEL}")
+logger.info(
+    f"BuiltinCodeExecutorAgent initialized with model: {BUILTIN_CODE_EXECUTOR_MODEL}"
+)
 logger.info(f"BuiltinCodeExecutorAgent configured with BuiltInCodeExecutor.")

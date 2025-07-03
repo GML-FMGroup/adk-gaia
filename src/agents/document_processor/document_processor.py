@@ -5,7 +5,7 @@ from src.core.config import get_model
 import logging
 
 # 导入相关的工具函数
-from src.tools.file_tools import (
+from src.agents.document_processor.tools import (
     read_text_file,
     read_docx_file,
     read_pptx_file,

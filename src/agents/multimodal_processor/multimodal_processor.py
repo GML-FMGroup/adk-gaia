@@ -5,7 +5,7 @@ from src.core.config import get_model
 import logging
 
 # 导入相关的工具函数
-from src.tools.file_tools import (
+from src.agents.document_processor.tools import (
     process_audio_with_gemini,
     process_image_with_gemini
 )

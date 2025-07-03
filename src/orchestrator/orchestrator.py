@@ -5,16 +5,16 @@ from google.adk.tools import agent_tool
 from src.core.config import get_model
 
 # 导入所有需要包装的 Agent 实例
-from .google_search_agent import google_search_agent
-from .builtin_code_executor_agent import builtin_code_executor_agent
-from .web_researcher import web_researcher_agent
-from .code_executor import code_executor_agent # 自定义代码执行器
-from .document_processor import document_processor_agent
-from .spreadsheet_data_agent import spreadsheet_data_agent
-from .multimodal_processor import multimodal_processor_agent
-from .specialized_file_agent import specialized_file_agent
-from .calculator_logic_agent import calculator_logic_agent
-from .filesystem_agent import filesystem_agent
+from ..agents.google_search.google_search_agent import google_search_agent
+from ..agents.builtin_code_executor.builtin_code_executor_agent import builtin_code_executor_agent
+from ..agents.web_research.web_researcher import web_researcher_agent
+from ..agents.code_executor.code_executor import code_executor_agent # 自定义代码执行器
+from ..agents.document_processor.document_processor import document_processor_agent
+from ..agents.spreadsheet_data.spreadsheet_data_agent import spreadsheet_data_agent
+from ..agents.multimodal_processor.multimodal_processor import multimodal_processor_agent
+from ..agents.specialized_file.specialized_file_agent import specialized_file_agent
+from ..agents.calculator.calculator_logic_agent import calculator_logic_agent
+from ..agents.filesystem.filesystem_agent import filesystem_agent
 
 from src.core.debug_logger import adk_before_model_callback, adk_after_model_callback
 

@@ -5,7 +5,7 @@ from src.core.config import get_model
 import logging
 
 # 导入相关的工具函数
-from src.tools.file_tools import (
+from src.agents.document_processor.tools import (
     parse_pdb_file,
     extract_zip_content,
     read_json_file # JSON/JSONL/JSONLD 也可以被认为是特殊文本文件

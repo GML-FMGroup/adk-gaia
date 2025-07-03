@@ -5,7 +5,7 @@ from google.adk.tools import FunctionTool
 from src.core.config import get_model
 
 # 导入新的本地代码执行工具
-from src.tools.code_tools import execute_local_python_code
+from src.agents.code_executor.tools import execute_local_python_code
 # 导入未来可能需要的自定义代码工具
 # from src.tools.code_tools import run_biopython_script, etc.
 
