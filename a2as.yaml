@@ -1,0 +1,948 @@
+manifest:
+  version: "0.1.3"
+  schema: https://a2as.org/cert/schema
+  subject:
+    name: gml-fmgroup/adk-gaia
+    source: https://github.com/gml-fmgroup/adk-gaia
+    branch: main
+    commit: "9b4ea4c4"
+    scope: [src/agents/document_processor/tools.py, src/agents/spreadsheet_data/tools.py, src/agents/filesystem/filesystem_agent.py,
+      src/agents/spreadsheet_data/spreadsheet_data_agent.py, src/agents/builtin_code_executor/builtin_code_executor_agent.py,
+      src/agents/filesystem/tools.py, src/api.py, src/agents/__init__.py, src/agents/google_search/google_search_agent.py,
+      src/core/debug_logger.py, src/agents/multimodal_processor/multimodal_processor.py, src/agents/specialized_file/specialized_file_agent.py,
+      src/agents/code_executor/tools.py, src/agents/web_research/tools.py, src/orchestrator/orchestrator.py, src/agents/calculator/tools.py,
+      src/agents/calculator/calculator_logic_agent.py, src/core/config.py, src/agents/code_executor/code_executor.py, src/agents/document_processor/document_processor.py,
+      src/agents/web_research/web_researcher.py]
+  issued:
+    by: A2AS.org
+    at: '2026-02-11T16:41:21Z'
+    url: https://a2as.org/certified/agents/gml-fmgroup/adk-gaia
+  signatures:
+    digest: sha256:xuv8dcH0QjO8h3EHkdpkgVeuVna04QsN2fjspBPMAPc
+    key: ed25519:kIDCFWIgqGPZPKkYsFE6jFfJ2c5Ftj4YITb8sp7NDcw
+    sig: ed25519:Si6UdwbkfX5K-0_ah-pq3yuWrYjTASqgppTSfUkTSFRXd3xsvPKq7dziSZNNuGYBVVDqqJQC9Pitip-hFahtDQ
+
+agents:
+  builtin_code_executor_agent:
+    type: instance
+    models: [BUILTIN_CODE_EXECUTOR_MODEL]
+    params:
+      name: BuiltinCodeExecutorAgent
+      description: 专门使用 ADK 内置的 `BuiltInCodeExecutor` 在云端沙箱中执行 Python 代码片段。 此智能体用于标准的 Python 计算或简单的脚本执行，不能访问本地文件系统。 期望的输入是一个包含待执行
+        Python 代码的字符串，智能体将返回代码的 stdout 或 stderr。
+      code_executor: BuiltInCodeExecutor
+      before_model_callback: adk_before_model_callback
+      after_model_callback: adk_after_model_callback
+  calculator_logic_agent:
+    type: instance
+    models: [CALCULATOR_LOGIC_MODEL]
+    tools: [evaluate_expression_tool, calculate_statistics_tool, unit_converter_tool, calculate_checksum_tool, newtons_method_tool]
+    params:
+      name: CalculatorLogicAgent
+      description: |-
+        专门执行数学和逻辑运算。接收一个包含任务描述和参数的 'request' 字符串。能够调用的工具包括：
+        - `evaluate_mathematical_expression`: 安全地评估数学表达式字符串。需要参数: `expression` (str)。
+        - `calculate_statistics`: 计算数值列表的统计数据。需要参数: `data` (List[float]), `stat_types` (List[str], e.g., ['mean', 'stdev'])。
+        - `unit_converter`: 在不同单位之间转换数值。需要参数: `value` (float), `original_unit` (str), `target_unit` (str)。
+        - `calculate_checksum`: 计算数字序列的校验和。需要参数: `number_sequence` (str), `algorithm` (str, e.g., 'isbn10', 默认为 'isbn10')。
+        - `newtons_method_solver`: 使用牛顿法求解方程的根。需要参数: `function_str` (str, e.g., 'x**2 - 4'), `initial_guess` (float), 可选 `derivative_str` (str), `tolerance` (float), `max_iterations` (int)。协调器应确保 'request' 字符串清晰地包含要执行的操作类型以及所有必需的参数。
+      instruction: ['- 对于 `evaluate_mathematical_expression`：`expression` 字符串。', '- 对于 `calculate_statistics`：一个 `data` 列表和一个
+          `stat_types` 列表。', '- 对于 `unit_converter`：`value`、`original_unit` 和 `target_unit`。', '- 对于 `calculate_checksum`：`number_sequence`
+          以及可选的 `algorithm`（默认为 ''isbn10''）。', '- 对于 `newtons_method_solver`：`function_str`、`initial_guess` 以及可选的 `derivative_str`、`tolerance`、`max_iterations`。',
+        '- 确保用于 `calculate_statistics` 的数值列表已正确格式化为 Python 数字列表。', '- 对于 `evaluate_mathematical_expression`，确保表达式是该工具的有效字符串。',
+        '4.  **返回结果：** 从工具的输出字典中返回 ''result''、''results''、''checksum_digit''、''root'' 或 ''message''。准确地传达任何错误消息。    如果工具返回一个包含
+          ''status'': ''success'' 和一个结果字段（例如 ''result''、''results''、''checksum_digit''、''root''）的字典，    则返回该结果字段的值。如果状态是 ''error''，则返回
+          ''message'' 字段。']
+      before_model_callback: adk_before_model_callback
+      after_model_callback: adk_after_model_callback
+  code_executor_agent:
+    type: instance
+    models: [CODE_EXECUTOR_MODEL]
+    tools: [execute_local_python_tool]
+    params:
+      name: CodeExecutorAgent
+      description: 专门在项目的工作目录内本地且安全地执行 Python 代码片段。 与 `BuiltinCodeExecutorAgent` 不同，此智能体执行的代码可以与本地项目环境交互（例如，读写项目内的文件，如果代码本身包含此类逻辑）。主要工具是
+        `execute_local_python_code`，它需要一个名为 `code` (str) 的参数，包含要执行的 Python 代码。返回代码执行的 stdout 和 stderr。适用于需要本地环境交互或 `BuiltinCodeExecutorAgent`
+        功能不足的 Python 代码执行场景。
+      instruction: ['**工作流程：**', 2. 使用 `execute_local_python_code` 工具，将代码字符串作为 `code` 参数传递。]
+      before_model_callback: adk_before_model_callback
+      after_model_callback: adk_after_model_callback
+  document_processor_agent:
+    type: instance
+    models: [DOCUMENT_PROCESSOR_MODEL]
+    tools: [read_text_tool, read_docx_tool, read_pptx_tool, process_pdf_tool]
+    params:
+      name: DocumentProcessorAgent
+      description: |-
+        专门负责读取、解析和理解多种格式的文档内容，包括 TXT, DOCX, PPTX, 和 PDF。 接收一个包含任务指令和文档绝对文件路径的 'request' 字符串。 根据文件类型选择合适的工具：
+        - `read_text_file`: 读取纯文本文档 (.txt)。需要参数: `file_path` (str)。
+        - `read_docx_file`: 读取 Word 文档 (.docx)。需要参数: `file_path` (str)。
+        - `read_pptx_file`: 读取 PowerPoint 演示文稿 (.pptx)，提取文本内容。需要参数: `file_path` (str)。
+        - `process_pdf_with_gemini`: 使用 Gemini API 处理 PDF 文档，可执行摘要、问答、信息提取等。需要参数: `file_path` (str), `prompt` (str, 描述对PDF的具体操作)。
+        协调器应确保 'request' 字符串中包含清晰的操作指令（特别是对于 PDF）和正确的绝对文件路径。
+      instruction: ['- 对于 `.pdf` 文件，使用 `process_pdf_with_gemini`，并将提取的操作/提示作为工具的 `prompt` 参数传递。', '- 对于 `.docx` 文件，使用 `read_docx_file`。',
+        '- 对于 `.pptx` 文件，使用 `read_pptx_file`。', '- 对于 `.txt` 或其他纯文本文件，使用 `read_text_file`。', 4.  **返回结果：** 传递工具输出中的 'content'
+          或 'message'。如果使用的工具是 `process_pdf_with_gemini`，其输出即为直接答案。]
+      before_model_callback: adk_before_model_callback
+      after_model_callback: adk_after_model_callback
+  filesystem_agent:
+    type: instance
+    models: [FILESYSTEM_AGENT_MODEL]
+    tools: [read_file_tool, write_file_tool, list_dir_tool, get_abs_path_tool, get_rel_path_tool]
+    params:
+      name: FilesystemAgent
+      description: |-
+        专门与本地文件系统进行交互，但操作范围严格限制在项目的当前工作目录内。 接收一个包含任务描述和相关路径（通常是相对路径）的 'request' 字符串。 可用的工具包括：
+        - `read_local_file`: 读取指定相对路径的文件内容。需要参数: `relative_path` (str)。
+        - `write_local_file`: 将内容写入指定相对路径的文件。需要参数: `relative_path` (str), `content` (str)。可选参数: `overwrite` (bool, 默认为 False)。**此工具需谨慎使用，以防意外覆盖文件。**
+        - `list_directory_contents`: 列出指定相对路径的目录内容。可选参数: `relative_path` (str, 默认为项目根目录)。
+        - `get_absolute_path`: 将相对于项目根目录的路径转换为绝对路径。需要参数: `relative_path` (str)。
+        - `get_relative_path`: 将项目内的绝对路径转换为相对于项目根目录的路径。需要参数: `absolute_path` (str)。
+        所有工具操作的路径都必须是相对于项目根目录的，除非明确说明是处理绝对路径的工具。协调器在委派任务时必须提供清晰的路径信息。
+      instruction: ['**可用工具：**', '- `read_local_file`：读取文件内容。需要 `relative_path`（相对路径）参数。', '- `write_local_file`：将内容写入文件。需要
+          `relative_path` 和 `content`（内容）参数。可选 `overwrite`（覆盖，默认为 False）参数。**请极其谨慎使用此工具。**', '- `list_directory_contents`：列出目录中的文件和子目录。可选
+          `relative_path` 参数（默认为项目根目录）。', '- `get_absolute_path`：将相对路径转换为绝对路径。需要 `relative_path` 参数。', '**工作流程：**', 2. 解析
+          `request` 以识别正确的工具及其参数（例如，`relative_path`、`content`、`overwrite`、`absolute_path`）。除非使用 `get_relative_path`，否则提供的所有路径都必须是相对于项目根目录的相对路径。,
+        4. 从工具的结果字典中返回相关信息（例如，'content'、'message'、'contents'、'absolute_path'、'relative_path'）。]
+      before_model_callback: adk_before_model_callback
+      after_model_callback: adk_after_model_callback
+  google_search_agent:
+    type: instance
+    models: [GOOGLE_SEARCH_MODEL]
+    tools: [google_search]
+    params:
+      name: GoogleSearchAgent
+      description: 专门执行 Google 网页搜索。接收一个包含搜索关键词的 'request' 字符串 (该字符串将作为搜索查询)。使用 ADK 内置的 `google_search` 工具来获取搜索结果。适用于需要获取一般知识、查找当前事件信息或任何需要直接进行网络搜索的场景。此智能体只负责执行搜索并返回原始搜索结果（通常是摘要或片段列表），不进行深度分析或内容提取。如果需要从特定网页提取详细内容，应使用
+        `WebResearcherAgent`。
+      before_model_callback: adk_before_model_callback
+      after_model_callback: adk_after_model_callback
+  multimodal_processor_agent:
+    type: instance
+    models: [MULTIMODAL_PROCESSOR_MODEL]
+    tools: [process_audio_tool, process_image_tool]
+    params:
+      name: MultimodalProcessorAgent
+      description: |-
+        专门处理和理解图像（如 PNG, JPG, JPEG, WEBP, HEIC, HEIF）和音频（如 MP3, WAV, AAC, OGG, FLAC）文件，利用 Gemini 的高级多模态AI能力。接收一个包含具体操作指令和文件绝对路径的 'request' 字符串。能够调用的工具包括：
+        - `process_image_with_gemini`: 处理图像文件。需要参数: `file_path` (str, 图像文件的绝对路径), `prompt` (str, 对图像的操作指令，例如 '描述这张图片', '识别图中的物体', '图中的文字是什么？')。
+        - `process_audio_with_gemini`: 处理音频文件。需要参数: `file_path` (str, 音频文件的绝对路径), `prompt` (str, 对音频的操作指令，例如 '转录此音频', '总结这段音频的主要内容', '这段音频的情绪是怎样的？')。
+        协调器必须在 'request' 中提供清晰的指令和正确的绝对文件路径。智能体将根据文件类型选择合适的工具，并将指令作为 'prompt' 参数传递给相应的 Gemini 处理函数。
+      instruction: ['- 对于图像文件（.png, .jpg, .jpeg, .webp, .heic, .heif），使用 `process_image_with_gemini`。', '- 对于音频文件（.mp3, .wav,
+          .aac, .ogg, .flac），使用 `process_audio_with_gemini`。']
+      before_model_callback: adk_before_model_callback
+      after_model_callback: adk_after_model_callback
+  orchestrator_agent.0:
+    type: instance
+    models: [gemini-2.0-flash]
+    params:
+      name: DummyAgent
+      instruction: [Error loading real agent.]
+      instance: orchestrator_agent
+  orchestrator_agent.1:
+    type: instance
+    models: [ORCHESTRATOR_MODEL]
+    tools: [google_search_tool, builtin_code_executor_tool, web_researcher_tool, code_executor_tool, document_processor_tool,
+      spreadsheet_data_tool, multimodal_processor_tool, specialized_file_tool, calculator_logic_tool, filesystem_tool]
+    params:
+      name: GAIAOrchestratorAgent
+      description: GAIA任务的主要协调智能体。理解请求、计划执行、提取参数（包括绝对文件路径），并委托给专门的智能体。
+      instruction: ['**流程：**', '*   **可用工具：** `GoogleSearchAgent`, `BuiltinCodeExecutorAgent`, `WebResearcherAgent`, `DocumentProcessorAgent`,
+          `SpreadsheetDataAgent`, `MultimodalProcessorAgent`, `SpecializedFileAgent`, `CalculatorLogicAgent`, `FilesystemAgent`,
+          `CodeExecutorAgent`。', '- **当** `BuiltinCodeExecutorAgent` 的能力不足（环境包缺失或没有返回预期结果），可尝试使用 `CodeExecutorAgent`。', '```json',
+        '{', '"FINAL_ANSWER": "42",', '}', '```', '```json', '{', '"FINAL_ANSWER": "[Agent could not determine the answer]",',
+        '}', '```']
+      before_model_callback: adk_before_model_callback
+      after_model_callback: adk_after_model_callback
+      instance: orchestrator_agent
+  specialized_file_agent:
+    type: instance
+    models: [SPECIALIZED_FILE_AGENT_MODEL]
+    tools: [parse_pdb_tool, extract_zip_tool, read_json_tool]
+    params:
+      name: SpecializedFileAgent
+      description: |-
+        专门处理特定的文件格式，包括 PDB (Protein Data Bank), ZIP 压缩包, 以及结构化的 JSON, JSONL, JSONLD 文件。接收一个包含操作指令和文件绝对路径的 'request' 字符串。根据文件类型和指令选择合适的工具：
+        - `parse_pdb_file`: 解析 PDB 文件并返回结构摘要或回答关于PDB文件的特定查询。需要参数: `file_path` (str, PDB文件的绝对路径)。工具的 prompt/query 参数用于传递特定查询（例如 '计算原子间距离'）。
+        - `extract_zip_content`: 列出 ZIP 压缩包的内容，或提取压缩包内特定文件的文本内容。需要参数: `file_path` (str, ZIP文件的绝对路径)。可选参数: `target_filename` (str, 要提取的内部文件名)。如果未提供 `target_filename`，则列出内容。
+        - `read_json_file`: 读取并解析 JSON, JSONL, 或 JSONLD 文件，返回其内容。需要参数: `file_path` (str, 文件的绝对路径)。
+        协调器应确保 'request' 字符串中包含清晰的操作指令（如对PDB的特定查询、ZIP中要提取的文件名）和正确的绝对文件路径。
+      instruction: ['- 对于 `.pdb` 文件，使用 `parse_pdb_file`。将任何提取的查询作为 `query` 参数传递。', '- 对于 `.zip` 文件，使用 `extract_zip_content`。传递任何提取的
+          `target_filename`。', '- 对于 `.json`、`.jsonl`、`.jsonld` 文件，使用 `read_json_file`。', 4.  **返回结果：** 传递工具输出中的 'content'
+          或 'message'。]
+      before_model_callback: adk_before_model_callback
+      after_model_callback: adk_after_model_callback
+  spreadsheet_data_agent:
+    type: instance
+    models: [SPREADSHEET_AGENT_MODEL]
+    tools: [get_info_tool, get_sheets_tool, get_cell_tool, query_tool, calculate_stat_tool]
+    params:
+      name: SpreadsheetDataAgent
+      description: |-
+        专门用于读取、分析和查询电子表格文件（如 Excel .xlsx, .xls 和 CSV .csv）中的数据。 接收一个包含任务指令和电子表格绝对文件路径的 'request' 字符串。 根据指令解析并调用以下工具之一：
+        - `get_spreadsheet_info`: 提供电子表格的元数据（如形状、列名、数据类型、基本统计、样本行）。需要参数: `file_path` (str, 绝对路径)。可选参数: `sheet_name` (str, 工作表名称或索引)。
+        - `get_sheet_names`: 列出 Excel 文件中的所有工作表名称。需要参数: `file_path` (str, 绝对路径)。仅适用于 Excel 文件。
+        - `get_cell_value`: 获取指定单元格的值。需要参数: `file_path` (str, 绝对路径), `cell_coordinate` (str, 例如 'B5' 或 'Sheet1!B5')。可选参数: `sheet_name` (str, 如果未在 cell_coordinate 中指定)。
+        - `query_spreadsheet`: 使用 Pandas 查询字符串筛选电子表格中的数据。需要参数: `file_path` (str, 绝对路径), `query_string` (str, 例如 "`列名 A` > 10 and `列名 B` == 'some_value'")。可选参数: `sheet_name` (str)。
+        - `calculate_column_stat`: 计算指定列的统计数据。需要参数: `file_path` (str, 绝对路径), `column_name` (str), `stat_type` (str, 例如 'sum', 'mean', 'median', 'std', 'count')。可选参数: `sheet_name` (str)。
+        协调器应确保 'request' 字符串清晰地指明要执行的操作以及所有必需的参数，包括正确的绝对文件路径和任何工作表特定信息。
+      instruction: ['**可用工具：**', '- `get_spreadsheet_info`：提供元数据（形状、列、类型、统计信息、样本行）。需要 `file_path`，可选 `sheet_name`。', '- `get_sheet_names`：列出
+          Excel 文件中的所有工作表名称。需要 `file_path`。', '- `get_cell_value`：获取单个单元格的值。需要 `file_path`、`cell_coordinate`，可选 `sheet_name`。',
+        '- `query_spreadsheet`：使用 pandas 查询字符串筛选数据。需要 `file_path`、`query_string`，可选 `sheet_name`。', '- `calculate_column_stat`：计算列的统计数据。需要
+          `file_path`、`column_name`、`stat_type`（例如，''sum''、''mean''、''std''），可选 `sheet_name`。', '**工作流程：**', 3.  **返回结果：**
+          传递工具输出字典中的相关信息（例如，'info'、'sheet_names'、'value'、'filtered_data'、'result'）。如果状态为 'error'，则返回 'message'。]
+      before_model_callback: adk_before_model_callback
+      after_model_callback: adk_after_model_callback
+  web_researcher_agent:
+    type: instance
+    models: [WEB_RESEARCHER_MODEL]
+    tools: [fetch_static_page_tool, interact_dynamic_page_tool, search_arxiv_tool, get_arxiv_details_tool, fetch_wikipedia_tool,
+      inspect_github_tool, get_wayback_snapshot_tool]
+    params:
+      name: WebResearcherAgent
+      description: |-
+        专门执行高级网络研究和交互任务，不执行通用的 Google 搜索。接收一个包含任务指令和必要参数的 'query' (或 'request') 字符串。能够调用的工具包括：
+        - `fetch_webpage_content`: 获取指定 URL 的静态文本内容。需要参数: `url` (str)。可选参数: `use_readability` (bool, 默认 True 获取清理后的 Markdown, False 获取原始 HTML)。
+        - `interact_with_dynamic_page`: 与需要 JavaScript 交互的动态网页进行交互（如点击、填表）。需要参数: `url` (str), `actions` (List[Dict], 定义交互步骤)。
+        - `search_arxiv`: 在 arXiv.org 上搜索科研论文。需要参数: `query` (str)。可选参数: `max_results` (int), `sort_by` (str), `sort_order` (str)。
+        - `get_arxiv_paper_details`: 获取特定 arXiv 论文的详细信息（摘要、元数据）。需要参数: `paper_id` (str)。
+        - `fetch_wikipedia_article`: 获取维基百科文章的摘要或内容。需要参数: `title` (str)。可选参数: `lang` (str, 默认 'en')。
+        - `inspect_github`: 执行 GitHub 相关操作，如获取仓库信息、文件内容、议题列表/详情。需要参数: `request_details` (str, 包含 action, owner, repo, path 等键值对)。
+        - `get_wayback_machine_snapshot`: 从互联网档案库 (Wayback Machine) 检索网页快照。需要参数: `url` (str)。可选参数: `timestamp` (str, YYYYMMDDhhmmss格式)。
+        协调器应确保 'query' (或 'request') 字符串清晰地描述任务，并为所选工具提供所有必需的参数（如 URL、搜索词、操作指令、文件路径等）。
+      instruction: ['**可用工具：**', '- `fetch_webpage_content`：用于获取特定 URL 的文本内容。设置 `use_readability=True`（默认）以获取清理后的 Markdown，设置为
+          `False` 以获取原始 HTML。', '- `interact_with_dynamic_page`：**仅**用于需要点击、表单填写等操作的重度 JavaScript 页面。需要 `url` 和 `actions`
+          列表参数。', '- `search_arxiv`：用于在 arXiv.org 上搜索论文。需要 `query` 参数。', '- `get_arxiv_paper_details`：用于通过 `paper_id` 获取 arXiv
+          论文的摘要/元数据。', '- `fetch_wikipedia_article`：用于通过 `title`（以及可选的 `lang`）获取维基百科文章的摘要。', '- `inspect_github`：用于执行 GitHub
+          相关任务。需要 `request_details` 字符串参数（例如：''action: get_file, owner: google, repo: adk, path: README.md''）。', '- `get_wayback_machine_snapshot`：用于通过
+          `url`（以及可选的 `timestamp`）检索已归档的网页快照。', '**工作流程：**']
+      before_model_callback: adk_before_model_callback
+      after_model_callback: adk_after_model_callback
+
+models:
+  BUILTIN_CODE_EXECUTOR_MODEL:
+    type: literal
+    agents: [builtin_code_executor_agent]
+  CALCULATOR_LOGIC_MODEL:
+    type: literal
+    agents: [calculator_logic_agent]
+  CODE_EXECUTOR_MODEL:
+    type: literal
+    agents: [code_executor_agent]
+  DOCUMENT_PROCESSOR_MODEL:
+    type: literal
+    agents: [document_processor_agent]
+  FILESYSTEM_AGENT_MODEL:
+    type: literal
+    agents: [filesystem_agent]
+  gemini-2.0-flash:
+    type: literal
+    agents: [orchestrator_agent.0]
+  GOOGLE_SEARCH_MODEL:
+    type: literal
+    agents: [google_search_agent]
+  MULTIMODAL_PROCESSOR_MODEL:
+    type: literal
+    agents: [multimodal_processor_agent]
+  ORCHESTRATOR_MODEL:
+    type: literal
+    agents: [orchestrator_agent.1]
+  SPECIALIZED_FILE_AGENT_MODEL:
+    type: literal
+    agents: [specialized_file_agent]
+  SPREADSHEET_AGENT_MODEL:
+    type: literal
+    agents: [spreadsheet_data_agent]
+  WEB_RESEARCHER_MODEL:
+    type: literal
+    agents: [web_researcher_agent]
+
+tools:
+  builtin_code_executor_tool:
+    type: function
+    agents: [orchestrator_agent.1]
+  BuiltInCodeExecutor:
+    type: module
+    params:
+      class: BuiltInCodeExecutor
+  calculate_checksum_tool:
+    type: function
+    agents: [calculator_logic_agent]
+  calculate_stat_tool:
+    type: function
+    agents: [spreadsheet_data_agent]
+  calculate_statistics_tool:
+    type: function
+    agents: [calculator_logic_agent]
+  calculator_logic_tool:
+    type: function
+    agents: [orchestrator_agent.1]
+  code_executor_tool:
+    type: function
+    agents: [orchestrator_agent.1]
+  document_processor_tool:
+    type: function
+    agents: [orchestrator_agent.1]
+  evaluate_expression_tool:
+    type: function
+    agents: [calculator_logic_agent]
+  execute_local_python_tool:
+    type: function
+    agents: [code_executor_agent]
+  extract_zip_tool:
+    type: function
+    agents: [specialized_file_agent]
+  fetch_static_page_tool:
+    type: function
+    agents: [web_researcher_agent]
+  fetch_wikipedia_tool:
+    type: function
+    agents: [web_researcher_agent]
+  filesystem_tool:
+    type: function
+    agents: [orchestrator_agent.1]
+  get_abs_path_tool:
+    type: function
+    agents: [filesystem_agent]
+  get_arxiv_details_tool:
+    type: function
+    agents: [web_researcher_agent]
+  get_cell_tool:
+    type: function
+    agents: [spreadsheet_data_agent]
+  get_info_tool:
+    type: function
+    agents: [spreadsheet_data_agent]
+  get_rel_path_tool:
+    type: function
+    agents: [filesystem_agent]
+  get_sheets_tool:
+    type: function
+    agents: [spreadsheet_data_agent]
+  get_wayback_snapshot_tool:
+    type: function
+    agents: [web_researcher_agent]
+  google_search:
+    type: module
+    agents: [google_search_agent]
+  google_search_tool:
+    type: function
+    agents: [orchestrator_agent.1]
+  inspect_github_tool:
+    type: function
+    agents: [web_researcher_agent]
+  interact_dynamic_page_tool:
+    type: function
+    agents: [web_researcher_agent]
+  list_dir_tool:
+    type: function
+    agents: [filesystem_agent]
+  multimodal_processor_tool:
+    type: function
+    agents: [orchestrator_agent.1]
+  newtons_method_tool:
+    type: function
+    agents: [calculator_logic_agent]
+  parse_pdb_tool:
+    type: function
+    agents: [specialized_file_agent]
+  process_audio_tool:
+    type: function
+    agents: [multimodal_processor_agent]
+  process_image_tool:
+    type: function
+    agents: [multimodal_processor_agent]
+  process_pdf_tool:
+    type: function
+    agents: [document_processor_agent]
+  query_tool:
+    type: module
+    agents: [spreadsheet_data_agent]
+  read_docx_tool:
+    type: function
+    agents: [document_processor_agent]
+  read_file_tool:
+    type: function
+    agents: [filesystem_agent]
+  read_json_tool:
+    type: function
+    agents: [specialized_file_agent]
+  read_pptx_tool:
+    type: function
+    agents: [document_processor_agent]
+  read_text_tool:
+    type: function
+    agents: [document_processor_agent]
+  search_arxiv_tool:
+    type: function
+    agents: [web_researcher_agent]
+  specialized_file_tool:
+    type: function
+    agents: [orchestrator_agent.1]
+  spreadsheet_data_tool:
+    type: function
+    agents: [orchestrator_agent.1]
+  unit_converter_tool:
+    type: function
+    agents: [calculator_logic_agent]
+  web_researcher_tool:
+    type: function
+    agents: [orchestrator_agent.1]
+  write_file_tool:
+    type: function
+    agents: [filesystem_agent]
+
+imports:
+  adk_after_model_callback: src.core.debug_logger.adk_after_model_callback
+  adk_before_model_callback: src.core.debug_logger.adk_before_model_callback
+  agent_tool: google.adk.tools.agent_tool
+  Any: typing.Any
+  arxiv: arxiv
+  async_playwright: playwright.async_api.async_playwright
+  asyncio: asyncio
+  BaseModel: pydantic.BaseModel
+  BeautifulSoup: bs4.BeautifulSoup
+  Body: fastapi.Body
+  builtin_code_executor_agent: agents.builtin_code_executor.builtin_code_executor_agent.builtin_code_executor_agent
+  BuiltInCodeExecutor: google.adk.code_executors.BuiltInCodeExecutor
+  calculate_checksum: src.agents.calculator.tools.calculate_checksum
+  calculate_column_stat: src.agents.spreadsheet_data.tools.calculate_column_stat
+  calculate_statistics: src.agents.calculator.tools.calculate_statistics
+  calculator_logic_agent: agents.calculator.calculator_logic_agent.calculator_logic_agent
+  CallbackContext: google.adk.agents.callback_context.CallbackContext
+  code_executor_agent: agents.code_executor.code_executor.code_executor_agent
+  Content: google.genai.types.Content
+  datetime: datetime
+  Dict: typing.Dict
+  diff: sympy.diff
+  document_processor_agent: agents.document_processor.document_processor.document_processor_agent
+  DocxDocument: docx.Document
+  evaluate_mathematical_expression: src.agents.calculator.tools.evaluate_mathematical_expression
+  execute_local_python_code: src.agents.code_executor.tools.execute_local_python_code
+  extract_zip_content: src.agents.document_processor.tools.extract_zip_content
+  FastAPI: fastapi.FastAPI
+  fetch_webpage_content: src.agents.web_research.tools.fetch_webpage_content
+  fetch_wikipedia_article: src.agents.web_research.tools.fetch_wikipedia_article
+  Field: pydantic.Field
+  filesystem_agent: agents.filesystem.filesystem_agent.filesystem_agent
+  FunctionTool: google.adk.tools.FunctionTool
+  genai: google.genai
+  genai_types: google.genai.types
+  get_absolute_path: src.agents.filesystem.tools.get_absolute_path
+  get_arxiv_paper_details: src.agents.web_research.tools.get_arxiv_paper_details
+  get_cell_value: src.agents.spreadsheet_data.tools.get_cell_value
+  get_gaia_data_dir: config.get_gaia_data_dir
+  get_model: src.core.config.get_model
+  get_relative_path: src.agents.filesystem.tools.get_relative_path
+  get_sheet_names: src.agents.spreadsheet_data.tools.get_sheet_names
+  get_spreadsheet_info: src.agents.spreadsheet_data.tools.get_spreadsheet_info
+  get_wayback_machine_snapshot: src.agents.web_research.tools.get_wayback_machine_snapshot
+  Github: github.Github
+  GithubException: github.GithubException
+  google_search: google.adk.tools.google_search
+  google_search_agent: agents.google_search.google_search_agent.google_search_agent
+  HTTPException: fastapi.HTTPException
+  InMemorySessionService: google.adk.sessions.in_memory_session_service.InMemorySessionService
+  inspect_github: src.agents.web_research.tools.inspect_github
+  interact_with_dynamic_page: src.agents.web_research.tools.interact_with_dynamic_page
+  io: io
+  json: json
+  lambdify: sympy.lambdify
+  List: typing.List
+  list_directory_contents: src.agents.filesystem.tools.list_directory_contents
+  LlmAgent: google.adk.agents.LlmAgent
+  LlmRequest: google.adk.models.llm_request.LlmRequest
+  LlmResponse: google.adk.models.llm_response.LlmResponse
+  load_dotenv: dotenv.load_dotenv
+  logging: logging
+  markdownify: markdownify
+  math: math
+  multimodal_processor_agent: agents.multimodal_processor.multimodal_processor.multimodal_processor_agent
+  N: sympy.N
+  newtons_method_solver: src.agents.calculator.tools.newtons_method_solver
+  NoCDXRecordFound: waybackpy.exceptions.NoCDXRecordFound
+  np: numpy
+  numexpr: numexpr
+  Optional: typing.Optional
+  orchestrator_agent: orchestrator.orchestrator.orchestrator_agent
+  os: os
+  parse_pdb_file: src.agents.document_processor.tools.parse_pdb_file
+  Part: google.genai.types.Part
+  Path: pathlib.Path
+  pd: pandas
+  PDBParser: Bio.PDB.PDBParser
+  Presentation: pptx.Presentation
+  process_audio_with_gemini: src.agents.document_processor.tools.process_audio_with_gemini
+  process_image_with_gemini: src.agents.document_processor.tools.process_image_with_gemini
+  process_pdf_with_gemini: src.agents.document_processor.tools.process_pdf_with_gemini
+  pypdf: pypdf
+  PyPDF2: PyPDF2
+  query_spreadsheet: src.agents.spreadsheet_data.tools.query_spreadsheet
+  re: re
+  read_docx_file: src.agents.document_processor.tools.read_docx_file
+  read_json_file: src.agents.document_processor.tools.read_json_file
+  read_local_file: src.agents.filesystem.tools.read_local_file
+  read_pptx_file: src.agents.document_processor.tools.read_pptx_file
+  read_text_file: src.agents.document_processor.tools.read_text_file
+  readabilipy: readabilipy
+  requests: requests
+  Runner: google.adk.runners.Runner
+  search_arxiv: src.agents.web_research.tools.search_arxiv
+  Session: google.adk.sessions.session.Session
+  should_save_debug_chat_log: config.should_save_debug_chat_log
+  specialized_file_agent: agents.specialized_file.specialized_file_agent.specialized_file_agent
+  spreadsheet_data_agent: agents.spreadsheet_data.spreadsheet_data_agent.spreadsheet_data_agent
+  statistics: statistics
+  subprocess: subprocess
+  Symbol: sympy.Symbol
+  sympify: sympy.sympify
+  sys: sys
+  tempfile: tempfile
+  threading: threading
+  traceback: traceback
+  Tuple: typing.Tuple
+  Union: typing.Union
+  unit_converter: src.agents.calculator.tools.unit_converter
+  UnitRegistry: pint.UnitRegistry
+  UnknownObjectException: github.UnknownObjectException
+  uuid: uuid
+  WaybackError: waybackpy.exceptions.WaybackError
+  WaybackMachineCDXServerAPI: waybackpy.WaybackMachineCDXServerAPI
+  waybackpy: waybackpy
+  web_researcher_agent: agents.web_research.web_researcher.web_researcher_agent
+  wikipediaapi: wikipediaapi
+  write_local_file: src.agents.filesystem.tools.write_local_file
+  zipfile: zipfile
+
+functions:
+  _clean_html_to_markdown:
+    type: sync
+    module: src.agents.web_research.tools
+    args: [html]
+    params:
+      returns: str
+  _ensure_serializable:
+    type: sync
+    module: src.core.debug_logger
+    args: [data]
+    params:
+      returns: Any
+  _format_log_entry:
+    type: sync
+    module: src.core.debug_logger
+    args: [agent_name, event_type, data, session_id_from_state, task_id, invocation_id, turn_id]
+    params:
+      returns: Dict
+  _get_file_lock:
+    type: sync
+    module: src.core.debug_logger
+    args: [filepath]
+    params:
+      returns: threading.Lock
+  _get_safe_abs_path:
+    type: sync
+    module: src.agents.filesystem.tools
+    args: [relative_path_str]
+    params:
+      returns: Optional[Path]
+  _read_spreadsheet_file:
+    type: sync
+    module: src.agents.spreadsheet_data.tools
+    args: [file_path, sheet_name_param]
+    params:
+      returns: Tuple
+  _safe_model_dump:
+    type: sync
+    module: src.core.debug_logger
+    args: [obj]
+    params:
+      returns: Any
+  _write_log:
+    type: sync
+    module: src.core.debug_logger
+    args: [log_entry]
+  adk_after_model_callback:
+    type: sync
+    module: src.core.debug_logger
+    args: [callback_context, llm_response]
+    params:
+      returns: None
+  adk_before_model_callback:
+    type: sync
+    module: src.core.debug_logger
+    args: [callback_context, llm_request]
+    params:
+      returns: Optional[LlmResponse]
+  calculate_checksum:
+    type: sync
+    module: src.agents.calculator.tools
+    args: [number_sequence, algorithm]
+    params:
+      returns: Dict
+  calculate_column_stat:
+    type: sync
+    module: src.agents.spreadsheet_data.tools
+    args: [file_path, column_name, stat_type, sheet_name]
+    params:
+      returns: Dict
+  calculate_statistics:
+    type: sync
+    module: src.agents.calculator.tools
+    args: [data, stat_types]
+    params:
+      returns: Dict
+  chat_endpoint:
+    type: async
+    module: src.api
+    args: [request]
+  eval_f:
+    type: sync
+    module: src.agents.calculator.tools
+    args: [val, expr_str]
+  evaluate_mathematical_expression:
+    type: sync
+    module: src.agents.calculator.tools
+    args: [expression]
+    params:
+      returns: Dict
+  execute_local_python_code:
+    type: sync
+    module: src.agents.code_executor.tools
+    args: [code]
+    params:
+      returns: Dict
+  extract_zip_content:
+    type: sync
+    module: src.agents.document_processor.tools
+    args: [file_path, target_filename]
+    params:
+      returns: Dict
+  fetch_webpage_content:
+    type: sync
+    module: src.agents.web_research.tools
+    args: [url, use_readability]
+    params:
+      returns: Dict
+  fetch_wikipedia_article:
+    type: sync
+    module: src.agents.web_research.tools
+    args: [title, lang]
+    params:
+      returns: Dict
+  get_absolute_path:
+    type: sync
+    module: src.agents.filesystem.tools
+    args: [relative_path]
+    params:
+      returns: Dict
+  get_api_port:
+    type: sync
+    module: src.core.config
+    params:
+      returns: int
+  get_arxiv_paper_details:
+    type: sync
+    module: src.agents.web_research.tools
+    args: [paper_id]
+    params:
+      returns: Dict
+  get_cell_value:
+    type: sync
+    module: src.agents.spreadsheet_data.tools
+    args: [file_path, cell_coordinate, sheet_name]
+    params:
+      returns: Dict
+  get_gaia_data_dir:
+    type: sync
+    module: src.core.config
+    params:
+      returns: Optional[str]
+  get_gaia_split:
+    type: sync
+    module: src.core.config
+    params:
+      returns: str
+  get_model:
+    type: sync
+    module: src.core.config
+    args: [model_key]
+    params:
+      returns: Optional[str]
+  get_relative_path:
+    type: sync
+    module: src.agents.filesystem.tools
+    args: [absolute_path]
+    params:
+      returns: Dict
+  get_runner_first_n:
+    type: sync
+    module: src.core.config
+    params:
+      returns: Optional[int]
+  get_runner_max_retries:
+    type: sync
+    module: src.core.config
+    params:
+      returns: int
+  get_runner_max_workers:
+    type: sync
+    module: src.core.config
+    params:
+      returns: int
+  get_runner_strategy:
+    type: sync
+    module: src.core.config
+    params:
+      returns: str
+  get_runner_task_id:
+    type: sync
+    module: src.core.config
+    params:
+      returns: Optional[str]
+  get_sheet_names:
+    type: sync
+    module: src.agents.spreadsheet_data.tools
+    args: [file_path]
+    params:
+      returns: Dict
+  get_spreadsheet_info:
+    type: sync
+    module: src.agents.spreadsheet_data.tools
+    args: [file_path, sheet_name]
+    params:
+      returns: Dict
+  get_wayback_machine_snapshot:
+    type: sync
+    module: src.agents.web_research.tools
+    args: [url, timestamp]
+    params:
+      returns: Dict
+  inspect_github:
+    type: sync
+    module: src.agents.web_research.tools
+    args: [request_details]
+    params:
+      returns: Dict
+  interact_with_dynamic_page:
+    type: async
+    module: src.agents.web_research.tools
+    args: [url, actions]
+    params:
+      returns: Dict
+  list_directory_contents:
+    type: sync
+    module: src.agents.filesystem.tools
+    args: [relative_path]
+    params:
+      returns: Dict
+  load_config:
+    type: sync
+    module: src.core.config
+    params:
+      returns: Dict
+  newtons_method_solver:
+    type: sync
+    module: src.agents.calculator.tools
+    args: [function_str, initial_guess, derivative_str, tolerance, max_iterations]
+    params:
+      returns: Dict
+  parse_pdb_file:
+    type: sync
+    module: src.agents.document_processor.tools
+    args: [file_path]
+    params:
+      returns: Dict
+  process_audio_with_gemini:
+    type: sync
+    module: src.agents.document_processor.tools
+    args: [file_path, prompt]
+    params:
+      returns: Dict
+  process_image_with_gemini:
+    type: sync
+    module: src.agents.document_processor.tools
+    args: [file_path, prompt]
+    params:
+      returns: Dict
+  process_pdf_with_gemini:
+    type: sync
+    module: src.agents.document_processor.tools
+    args: [file_path, prompt]
+    params:
+      returns: Dict
+  query_spreadsheet:
+    type: sync
+    module: src.agents.spreadsheet_data.tools
+    args: [file_path, query_string, sheet_name]
+    params:
+      returns: Dict
+  read_docx_file:
+    type: sync
+    module: src.agents.document_processor.tools
+    args: [file_path]
+    params:
+      returns: Dict
+  read_json_file:
+    type: sync
+    module: src.agents.document_processor.tools
+    args: [file_path]
+    params:
+      returns: Dict
+  read_local_file:
+    type: sync
+    module: src.agents.filesystem.tools
+    args: [relative_path]
+    params:
+      returns: Dict
+  read_pptx_file:
+    type: sync
+    module: src.agents.document_processor.tools
+    args: [file_path]
+    params:
+      returns: Dict
+  read_root:
+    type: async
+    module: src.api
+  read_text_file:
+    type: sync
+    module: src.agents.document_processor.tools
+    args: [file_path]
+    params:
+      returns: Dict
+  safe_eval_expression:
+    type: sync
+    module: src.agents.calculator.tools
+    args: [expression]
+    params:
+      returns: Any
+  search_arxiv:
+    type: sync
+    module: src.agents.web_research.tools
+    args: [query, max_results, sort_by, sort_order]
+    params:
+      returns: Dict
+  should_save_debug_chat_log:
+    type: sync
+    module: src.core.config
+    params:
+      returns: bool
+  unit_converter:
+    type: sync
+    module: src.agents.calculator.tools
+    args: [value, original_unit, target_unit]
+    params:
+      returns: Dict
+  write_local_file:
+    type: sync
+    module: src.agents.filesystem.tools
+    args: [relative_path, content, overwrite]
+    params:
+      returns: Dict
+
+variables:
+  GITHUB_PERSONAL_ACCESS_TOKEN:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [dotenv_path]
+  GOOGLE_API_KEY:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [dotenv_path]
+
+files:
+  "..":
+    type: pattern
+    actions: [read]
+    params:
+      caller: [os.path.join]
+      pattern: [os.path.dirname(), "..", ".."]
+  .env:
+    type: pattern
+    actions: [read]
+    params:
+      caller: [os.path.join]
+      pattern: [os.path.dirname(), "..", .env]
+  .py:
+    type: literal
+    actions: [write]
+    params:
+      caller: [tempfile.NamedTemporaryFile]
+      mode: w+
+      delete: "False"
+      dir: PROJECT_ROOT
+      encoding: utf-8
+  absolute_path:
+    type: variable
+    actions: [read]
+    params:
+      caller: [Path]
+  config.json:
+    type: pattern
+    actions: [read]
+    params:
+      caller: [os.path.join]
+      pattern: [project_root, config.json]
+  CONFIG_PATH:
+    type: variable
+    actions: [read]
+    params:
+      caller: [os.path.exists, open, json.load]
+  DEBUG_LOG_DIR:
+    type: variable
+    actions: [read]
+    params:
+      caller: [os.path.exists, os.makedirs]
+  DEBUG_LOG_DIR_NAME:
+    type: pattern
+    actions: [read]
+    params:
+      caller: [os.path.join]
+      pattern: [GAIA_BASE_DIR, DEBUG_LOG_DIR_NAME]
+  file_path:
+    type: variable
+    actions: [read]
+    params:
+      caller: [open, json.load, Path]
+      alias: [f]
+  log_filepath:
+    type: variable
+    actions: [read, write]
+    params:
+      caller: [os.path.exists, open, os.rename]
+  path:
+    type: literal
+    actions: [read]
+    params:
+      caller: [Path(file_path)]
+  rel_path:
+    type: pattern
+    actions: [read]
+    params:
+      caller: [os.path.join]
+      pattern: [project_root, rel_path]
+  resolved_abs_path:
+    type: variable
+    actions: [read]
+    params:
+      caller: [Path.resolve()]
+  safe_path:
+    type: variable
+    actions: [read, write]
+    params:
+      caller: [safe_path.read_text, safe_path.parent.mkdir, safe_path.write_text, safe_path.iterdir]
+  temp_script_path:
+    type: variable
+    actions: [delete, read]
+    params:
+      caller: [os.remove, os.path.exists]
+
+processes:
+  python:
+    type: shell
+    actions: [exec]
+    args: [[temp_script_path]]
+    params:
+      caller: [subprocess.run]
+      shell: ["False"]
+      ref: sys.executable
